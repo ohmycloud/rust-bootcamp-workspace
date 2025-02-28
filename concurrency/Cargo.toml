@@ -1,0 +1,15 @@
+[package]
+name = "mpsc"
+version = "0.1.0"
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.86"
+dashmap = "6.0.1"
+oneshot = "0.1.8"
+rand = "0.9.0-alpha.2"
+tokio = { version = "1.39.2", features = ["rt", "rt-multi-thread", "macros", "net", "io-util"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"

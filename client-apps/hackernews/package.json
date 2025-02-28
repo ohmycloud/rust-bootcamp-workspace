@@ -1,0 +1,29 @@
+{
+  "name": "hackernews",
+  "version": "1.0.0",
+  "description": "hackernews",
+  "main": "tailwind.config.js",
+  "scripts": {
+    "watch": "tailwindcss -i ./input.css -o ./assets/tailwind.css --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ohmycloud/client-apps.git"
+  },
+  "keywords": [
+    "hackernews"
+  ],
+  "author": "ohmycloud",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ohmycloud/client-apps/issues"
+  },
+  "homepage": "https://github.com/ohmycloud/client-apps#readme",
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.15",
+    "tailwindcss": "^3.4.13"
+  },
+  "dependencies": {
+    "@tailwindcss/forms": "^0.5.9"
+  }
+}

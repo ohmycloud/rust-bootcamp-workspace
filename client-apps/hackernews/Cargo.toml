@@ -1,0 +1,22 @@
+[package]
+name = "hackernews"
+version = "0.1.0"
+authors = ["ohmycloud <ohmycloudy@gmail.com>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.96"
+chrono = { version = "0.4.40", features = ["serde"]}
+
+dioxus = { version = "0.6.3", features = ["web", "router"] }
+
+# Debug
+dioxus-logger = "0.6.2"
+futures = "0.3.31"
+reqwest = { version = "0.12.12", features = ["json"] }
+serde = { version = "1.0.218", features = ["derive"] }
+
+[dev-dependencies]
+tokio = { version = "1.43.0", features = ["rt", "rt-multi-thread", "macros"] }
