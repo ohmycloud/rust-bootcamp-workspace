@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use axum::{Router, routing::get};
+use axum::{Router, extract::Request, routing::get};
 use opentelemetry::trace::TracerProvider;
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{
@@ -8,6 +8,7 @@ use opentelemetry_sdk::{
     trace::{RandomIdGenerator, Sampler, Tracer},
 };
 use tokio::{
+    join,
     net::TcpListener,
     time::{Instant, sleep},
 };
@@ -49,8 +50,8 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[instrument]
-async fn index_handler() -> &'static str {
+#[instrument(fields(http.uri = req.uri().path(), http.method = req.method().as_str()))]
+async fn index_handler(req: Request) -> &'static str {
     sleep(Duration::from_millis(11)).await;
     let ret = long_task().await;
     info!(http.status = 200, "index handler completed");
@@ -61,6 +62,10 @@ async fn index_handler() -> &'static str {
 async fn long_task() -> &'static str {
     let start = Instant::now();
     sleep(Duration::from_millis(100)).await;
+    let t1 = task1();
+    let t2 = task2();
+    let t3 = task3();
+    let _ = join!(t1, t2, t3);
     let elapsed = start.elapsed().as_millis() as u64;
     warn!(app.task_duration = elapsed, "task takes too long");
     "Hello, world!"
@@ -78,10 +83,29 @@ fn init_tracer() -> anyhow::Result<Tracer> {
         .with_batch_exporter(otlp_exporter)
         .with_sampler(Sampler::AlwaysOn)
         .with_id_generator(RandomIdGenerator::default())
-        .with_resource(Resource::builder().with_service_name("my_service").build())
+        .with_resource(
+            Resource::builder()
+                .with_service_name("axum.service")
+                .build(),
+        )
         .build();
 
     let tracer = provider.tracer("my_service");
 
     Ok(tracer)
+}
+
+#[instrument]
+async fn task1() {
+    sleep(Duration::from_millis(10)).await;
+}
+
+#[instrument]
+async fn task2() {
+    sleep(Duration::from_millis(50)).await;
+}
+
+#[instrument]
+async fn task3() {
+    sleep(Duration::from_millis(300)).await;
 }
