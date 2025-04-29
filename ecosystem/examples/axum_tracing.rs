@@ -15,11 +15,17 @@ use tracing_subscriber::{
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let file_appender = tracing_appender::rolling::daily("/tmp/axum_logs", "ecosystem.log");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     let layer = fmt::Layer::new()
         .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
         .pretty()
+        .with_filter(LevelFilter::DEBUG);
+    let log = fmt::Layer::new()
+        .with_span_events(FmtSpan::CLOSE)
+        .with_writer(non_blocking)
         .with_filter(LevelFilter::INFO);
-    tracing_subscriber::registry().with(layer).init();
+    tracing_subscriber::registry().with(layer).with(log).init();
 
     let addr = "0.0.0.0:8080";
     let app = Router::new().route("/", get(index_handler));
