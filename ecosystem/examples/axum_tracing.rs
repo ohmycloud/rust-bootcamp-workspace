@@ -1,6 +1,12 @@
 use std::time::Duration;
 
 use axum::{Router, routing::get};
+use opentelemetry::trace::TracerProvider;
+use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_sdk::{
+    Resource,
+    trace::{RandomIdGenerator, Sampler, Tracer},
+};
 use tokio::{
     net::TcpListener,
     time::{Instant, sleep},
@@ -17,15 +23,22 @@ use tracing_subscriber::{
 async fn main() -> anyhow::Result<()> {
     let file_appender = tracing_appender::rolling::daily("/tmp/axum_logs", "ecosystem.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
-    let layer = fmt::Layer::new()
+    let log_layer = fmt::Layer::new()
         .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
         .pretty()
         .with_filter(LevelFilter::DEBUG);
-    let log = fmt::Layer::new()
+    let file_layer = fmt::Layer::new()
         .with_span_events(FmtSpan::CLOSE)
         .with_writer(non_blocking)
         .with_filter(LevelFilter::INFO);
-    tracing_subscriber::registry().with(layer).with(log).init();
+
+    let tracer = init_tracer()?;
+    let opentelemetry_layer = tracing_opentelemetry::layer().with_tracer(tracer);
+    tracing_subscriber::registry()
+        .with(log_layer)
+        .with(file_layer)
+        .with(opentelemetry_layer)
+        .init();
 
     let addr = "0.0.0.0:8080";
     let app = Router::new().route("/", get(index_handler));
@@ -51,4 +64,24 @@ async fn long_task() -> &'static str {
     let elapsed = start.elapsed().as_millis() as u64;
     warn!(app.task_duration = elapsed, "task takes too long");
     "Hello, world!"
+}
+
+fn init_tracer() -> anyhow::Result<Tracer> {
+    let otlp_exporter = opentelemetry_otlp::SpanExporter::builder()
+        .with_tonic()
+        .with_endpoint("http://localhost:4317")
+        .with_timeout(Duration::from_secs(3))
+        .build()?;
+
+    // Create a tracer provider with the exporter
+    let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
+        .with_batch_exporter(otlp_exporter)
+        .with_sampler(Sampler::AlwaysOn)
+        .with_id_generator(RandomIdGenerator::default())
+        .with_resource(Resource::builder().with_service_name("my_service").build())
+        .build();
+
+    let tracer = provider.tracer("my_service");
+
+    Ok(tracer)
 }
