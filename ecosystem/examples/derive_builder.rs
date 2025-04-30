@@ -5,7 +5,9 @@ use derive_builder::Builder;
 struct User {
     #[builder(setter(into))]
     name: String,
-    #[builder(default = 42)]
+    #[builder(setter(into, strip_option), default)]
+    email: Option<String>,
+    #[builder(default = "20")]
     age: u32,
     #[builder(default = vec![], setter(each(name = "skill", into)))]
     skills: Vec<String>,
@@ -22,6 +24,7 @@ fn main() -> Result<()> {
         .name("Alice")
         .skill("书法")
         .skill("音乐")
+        .email("ohmycloudy@uk")
         .build()?;
     println!("{:?}", user);
 
