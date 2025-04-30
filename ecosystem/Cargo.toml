@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.98"
 axum = "0.8.3"
+chrono = { version = "0.4.41", features = ["serde"] }
 derive_builder = "0.20.2"
 opentelemetry = "0.29.1"
 opentelemetry-otlp = { version = "0.29.0", features = ["grpc-tonic", "trace"] }
