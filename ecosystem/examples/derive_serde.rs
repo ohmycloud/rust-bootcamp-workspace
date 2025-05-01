@@ -23,7 +23,7 @@ impl Serialize for User {
     }
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     let user = User {
         name: "John Doe".to_string(),
         age: 30,
@@ -31,6 +31,11 @@ fn main() {
         skills: vec!["Rust".to_string(), "Python".to_string()],
     };
 
-    let json = serde_json::to_string(&user);
+    let json = serde_json::to_string(&user)?;
     println!("{:?}", json);
+
+    let user: User = serde_json::from_str(&json)?;
+    println!("{:?}", user);
+
+    Ok(())
 }
