@@ -1,3 +1,5 @@
+use std::{fmt, str::FromStr};
+
 use anyhow::Result;
 use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
 use chacha20poly1305::{
@@ -10,6 +12,32 @@ use serde_with::{DisplayFromStr, serde_as};
 
 const KEY: &[u8] = b"01234567890123456789012345678901";
 
+#[derive(Debug)]
+struct Sensitive(String);
+
+impl fmt::Display for Sensitive {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let encrypted = encrypt(self.0.as_bytes()).unwrap();
+        write!(f, "{}", encrypted)
+    }
+}
+
+impl FromStr for Sensitive {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let decrypted = decrypt(s)?;
+        let decrypted = String::from_utf8(decrypted)?;
+        Ok(Self(decrypted))
+    }
+}
+
+impl Sensitive {
+    fn new(data: impl Into<String>) -> Self {
+        Self(data.into())
+    }
+}
+
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -18,18 +46,20 @@ struct User {
     #[serde(rename = "privateAge")]
     age: u8,
     date_of_birth: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     skills: Vec<String>,
     state: WorkState,
     #[serde(serialize_with = "b64_encode", deserialize_with = "b64_decode")]
     data: Vec<u8>,
-    #[serde(serialize_with = "serde_encrypt", deserialize_with = "serde_decrypt")]
-    sensitive: String,
+    // #[serde(serialize_with = "serde_encrypt", deserialize_with = "serde_decrypt")]
     #[serde_as(as = "DisplayFromStr")]
-    url: http::Uri,
+    sensitive: Sensitive,
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    url: Vec<http::Uri>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", tag = "type", content = "details")]
 enum WorkState {
     Starting,
     Working(String),
@@ -103,8 +133,8 @@ fn main() -> Result<()> {
         skills: vec!["Rust".to_string(), "Python".to_string()],
         state,
         data: vec![1, 2, 3, 4, 5],
-        sensitive: "Sensitive Data".to_string(),
-        url: "https://example.com".parse()?,
+        sensitive: Sensitive::new("Sensitive Data"),
+        url: vec!["https://example.com".parse()?],
     };
 
     let json = serde_json::to_string(&user)?;
