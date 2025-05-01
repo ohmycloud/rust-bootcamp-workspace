@@ -1,7 +1,13 @@
 use anyhow::Result;
 use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
+use chacha20poly1305::{
+    AeadCore, ChaCha20Poly1305, KeyInit, Nonce,
+    aead::{Aead, OsRng},
+};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+
+const KEY: &[u8] = b"01234567890123456789012345678901";
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -14,6 +20,8 @@ struct User {
     state: WorkState,
     #[serde(serialize_with = "b64_encode", deserialize_with = "b64_decode")]
     data: Vec<u8>,
+    #[serde(serialize_with = "serde_encrypt", deserialize_with = "serde_decrypt")]
+    sensitive: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -44,6 +52,44 @@ where
     Ok(decoded)
 }
 
+// encrypt with chacha20poly1305 and then encode with base64
+fn encrypt(data: &[u8]) -> Result<String> {
+    let cipher = ChaCha20Poly1305::new(KEY.into());
+    let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
+    let ciphertext = cipher.encrypt(&nonce, data).unwrap();
+    let nonce_cypertext: Vec<_> = nonce.iter().copied().chain(ciphertext).collect();
+    let encoded = BASE64_URL_SAFE_NO_PAD.encode(nonce_cypertext);
+
+    Ok(encoded)
+}
+
+fn decrypt(encoded: &str) -> Result<Vec<u8>> {
+    let decoded = BASE64_URL_SAFE_NO_PAD.decode(encoded.as_bytes())?;
+    let cipher = ChaCha20Poly1305::new(KEY.into());
+    let nonce_bytes = &decoded[..12];
+    let nonce = Nonce::from_slice(nonce_bytes);
+    let decrypted = cipher.decrypt(&nonce, &decoded[12..]).unwrap();
+    Ok(decrypted)
+}
+
+fn serde_encrypt<S>(data: &str, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let encrypted = encrypt(data.as_bytes()).map_err(serde::ser::Error::custom)?;
+    serializer.serialize_str(&encrypted)
+}
+
+fn serde_decrypt<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let encrypted = String::deserialize(deserializer)?;
+    let decrypted = decrypt(&encrypted).map_err(serde::de::Error::custom)?;
+    let decrypted = String::from_utf8(decrypted).map_err(serde::de::Error::custom)?;
+    Ok(decrypted)
+}
+
 fn main() -> Result<()> {
     let state = WorkState::Starting;
     let user = User {
@@ -53,6 +99,7 @@ fn main() -> Result<()> {
         skills: vec!["Rust".to_string(), "Python".to_string()],
         state,
         data: vec![1, 2, 3, 4, 5],
+        sensitive: "Sensitive Data".to_string(),
     };
 
     let json = serde_json::to_string(&user)?;
