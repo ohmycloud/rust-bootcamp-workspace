@@ -6,7 +6,7 @@ use std::{
 use axum::{
     Json, Router,
     extract::{Request, State},
-    routing::get,
+    routing::{get, patch},
 };
 use opentelemetry::trace::TracerProvider;
 use opentelemetry_otlp::WithExportConfig;
@@ -33,6 +33,12 @@ struct User {
     name: String,
     age: u8,
     skills: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct UserUpdate {
+    age: Option<u8>,
+    skills: Option<Vec<String>>,
 }
 
 #[tokio::main]
@@ -67,6 +73,7 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/", get(index_handler))
         .route("/user", get(get_user))
+        .route("/update_user", patch(update_user))
         .with_state(user);
     let listener = TcpListener::bind(addr).await?;
     info!("Starting server on {}", addr);
@@ -139,4 +146,22 @@ async fn task3() {
 #[instrument]
 async fn get_user(State(user): State<Arc<Mutex<User>>>) -> Json<User> {
     (*user.lock().unwrap()).clone().into()
+}
+
+#[axum::debug_handler]
+#[instrument]
+async fn update_user(
+    State(user): State<Arc<Mutex<User>>>,
+    Json(new_user): Json<UserUpdate>,
+) -> Json<User> {
+    let mut user = user.lock().unwrap();
+    if let Some(age) = new_user.age {
+        user.age = age;
+    }
+
+    if let Some(skills) = new_user.skills {
+        user.skills = skills;
+    }
+
+    (*user).clone().into()
 }
