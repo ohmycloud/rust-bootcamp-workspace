@@ -1,4 +1,7 @@
-use std::time::Duration;
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use axum::{
     Json, Router,
@@ -58,6 +61,7 @@ async fn main() -> anyhow::Result<()> {
         age: 30,
         skills: vec!["Raku".to_string(), "Perl 6".to_string()],
     };
+    let user = Arc::new(Mutex::new(user));
 
     let addr = "0.0.0.0:8080";
     let app = Router::new()
@@ -133,6 +137,6 @@ async fn task3() {
 
 #[axum::debug_handler]
 #[instrument]
-async fn get_user(State(user): State<User>) -> Json<User> {
-    user.into()
+async fn get_user(State(user): State<Arc<Mutex<User>>>) -> Json<User> {
+    (*user.lock().unwrap()).clone().into()
 }
