@@ -6,9 +6,11 @@ use chacha20poly1305::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_with::{DisplayFromStr, serde_as};
 
 const KEY: &[u8] = b"01234567890123456789012345678901";
 
+#[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct User {
@@ -22,6 +24,8 @@ struct User {
     data: Vec<u8>,
     #[serde(serialize_with = "serde_encrypt", deserialize_with = "serde_decrypt")]
     sensitive: String,
+    #[serde_as(as = "DisplayFromStr")]
+    url: http::Uri,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -100,6 +104,7 @@ fn main() -> Result<()> {
         state,
         data: vec![1, 2, 3, 4, 5],
         sensitive: "Sensitive Data".to_string(),
+        url: "https://example.com".parse()?,
     };
 
     let json = serde_json::to_string(&user)?;

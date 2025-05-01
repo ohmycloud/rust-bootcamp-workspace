@@ -11,11 +11,13 @@ chacha20poly1305 = "0.10.1"
 chrono = { version = "0.4.41", features = ["serde"] }
 derive_builder = "0.20.2"
 derive_more = { version = "2.0.1", features = ["full"] }
+http = "1.3.1"
 opentelemetry = "0.29.1"
 opentelemetry-otlp = { version = "0.29.0", features = ["grpc-tonic", "trace"] }
 opentelemetry_sdk = { version = "0.29.0", features = ["rt-tokio"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
+serde_with = "3.12.0"
 strum = { version = "0.27.1", features = ["derive", "strum_macros"] }
 thiserror = "2.0.12"
 tokio = { version = "1.44.2", features = ["rt", "rt-multi-thread", "macros"] }
