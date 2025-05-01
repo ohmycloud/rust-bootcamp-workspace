@@ -1,12 +1,17 @@
 use std::time::Duration;
 
-use axum::{Router, extract::Request, routing::get};
+use axum::{
+    Json, Router,
+    extract::{Request, State},
+    routing::get,
+};
 use opentelemetry::trace::TracerProvider;
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{
     Resource,
     trace::{RandomIdGenerator, Sampler, Tracer},
 };
+use serde::{Deserialize, Serialize};
 use tokio::{
     join,
     net::TcpListener,
@@ -19,6 +24,13 @@ use tracing_subscriber::{
     layer::SubscriberExt,
     util::SubscriberInitExt,
 };
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct User {
+    name: String,
+    age: u8,
+    skills: Vec<String>,
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -41,8 +53,17 @@ async fn main() -> anyhow::Result<()> {
         .with(opentelemetry_layer)
         .init();
 
+    let user = User {
+        name: "Larry Wall".to_string(),
+        age: 30,
+        skills: vec!["Raku".to_string(), "Perl 6".to_string()],
+    };
+
     let addr = "0.0.0.0:8080";
-    let app = Router::new().route("/", get(index_handler));
+    let app = Router::new()
+        .route("/", get(index_handler))
+        .route("/user", get(get_user))
+        .with_state(user);
     let listener = TcpListener::bind(addr).await?;
     info!("Starting server on {}", addr);
     axum::serve(listener, app.into_make_service()).await?;
@@ -108,4 +129,10 @@ async fn task2() {
 #[instrument]
 async fn task3() {
     sleep(Duration::from_millis(300)).await;
+}
+
+#[axum::debug_handler]
+#[instrument]
+async fn get_user(State(user): State<User>) -> Json<User> {
+    user.into()
 }
