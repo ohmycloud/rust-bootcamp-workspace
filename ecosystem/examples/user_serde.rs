@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 struct User {
     name: String,
+    #[serde(rename = "privateAge")]
     age: u8,
     date_of_birth: DateTime<Utc>,
     skills: Vec<String>,
