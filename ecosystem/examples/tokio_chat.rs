@@ -35,14 +35,38 @@ pub async fn main() -> Result<()> {
 }
 
 #[derive(Debug)]
-struct Message {
-    sender: String,
-    content: String,
+enum Message {
+    Joined(String),
+    Left(String),
+    Chat { sender: String, content: String },
+}
+
+impl Message {
+    fn user_joined(username: &str) -> Self {
+        let content = format!("{} has joined the chat", username);
+        Self::Joined(content)
+    }
+
+    fn user_left(username: &str) -> Self {
+        let content = format!("{} has left the chat", username);
+        Self::Left(content)
+    }
+
+    fn chat(sender: impl Into<String>, content: impl Into<String>) -> Self {
+        Self::Chat {
+            sender: sender.into(),
+            content: content.into(),
+        }
+    }
 }
 
 impl std::fmt::Display for Message {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{}] {}", self.sender, self.content)
+        match self {
+            Message::Joined(username) => write!(f, "User {} joined", username),
+            Message::Left(username) => write!(f, "User {} left", username),
+            Message::Chat { sender, content } => write!(f, "[{}] {}", sender, content),
+        }
     }
 }
 
@@ -112,10 +136,7 @@ async fn handle_connection(
         None => return Ok(()),
     };
     let mut peer = state.add(addr, username, stream).await;
-    let message = Arc::new(Message {
-        sender: "Server".to_string(),
-        content: format!("{} has joined the channel", peer.username),
-    });
+    let message = Arc::new(Message::user_joined(&peer.username));
     state.broadcast(addr, message).await;
 
     while let Some(line) = peer.stream.next().await {
@@ -127,10 +148,7 @@ async fn handle_connection(
             }
         };
 
-        let message = Arc::new(Message {
-            sender: peer.username.clone(),
-            content: line,
-        });
+        let message = Arc::new(Message::chat(&peer.username, line));
         state.broadcast(addr, message).await;
     }
 
@@ -139,10 +157,7 @@ async fn handle_connection(
     state.peers.remove(&addr);
 
     // notify other peers that the peer has left the chat
-    let message = Arc::new(Message {
-        sender: "Server".to_string(),
-        content: format!("{} has left the channel", peer.username),
-    });
+    let message = Arc::new(Message::user_left(&peer.username));
     state.broadcast(addr, message).await;
 
     Ok(())
