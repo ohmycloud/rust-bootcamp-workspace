@@ -3,8 +3,6 @@ use std::{thread, time::Duration};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    sleep(Duration::from_millis(100)).await;
-
     let handle = thread::spawn(|| {
         // execute future
         let rt = tokio::runtime::Builder::new_current_thread()
@@ -24,14 +22,7 @@ async fn main() -> Result<()> {
             println!("Result: {}", ret);
         });
 
-        rt.spawn(async {
-            println!("Future 3!");
-            let content = tokio::fs::read_to_string("LICENSE").await.unwrap();
-            println!("Content length: {}", content.len());
-        });
-        rt.block_on(async {
-            println!("Hello, World!");
-        })
+        rt.block_on(sleep(Duration::from_millis(900)));
     });
     handle.join().unwrap();
 
