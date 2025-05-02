@@ -13,18 +13,18 @@ async fn main() -> Result<()> {
         rt.spawn(async {
             println!("Future 1!");
             let content = tokio::fs::read_to_string("Cargo.toml").await.unwrap();
-            println!("Content length: {}", content.len());
+            println!("Future 1 content length: {}", content.len());
         });
 
         rt.spawn(async {
             println!("Future 2!");
             let ret = expensive_blocking_task("Future 2".to_string());
-            println!("Result: {}", ret);
+            println!("Future 2 result: {}", ret);
         });
 
         // there is no reactor running,
         // must be called from the context of a Tokio 1.x runtime
-        rt.block_on(tokio::time::sleep(Duration::from_millis(900)));
+        // rt.block_on(tokio::time::sleep(Duration::from_millis(900)));
         rt.block_on(sleep(Duration::from_millis(900)));
     });
     handle.join().unwrap();
