@@ -22,6 +22,7 @@ async fn main() -> Result<()> {
             println!("Result: {}", ret);
         });
 
+        rt.block_on(tokio::time::sleep(Duration::from_millis(900)));
         rt.block_on(sleep(Duration::from_millis(900)));
     });
     handle.join().unwrap();
