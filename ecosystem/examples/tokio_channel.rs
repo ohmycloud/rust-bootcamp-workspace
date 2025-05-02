@@ -9,8 +9,12 @@ async fn main() -> Result<()> {
     let handle = worker(rx);
 
     tokio::spawn(async move {
+        let mut i = 0;
         loop {
-            tx.send(Utc::now().to_rfc3339()).await?;
+            i += 1;
+            let message = format!("Send task {} - {}", i, Utc::now().to_rfc3339());
+            println!("{}", message);
+            tx.send(message).await?;
         }
         #[allow(unreachable_code)]
         Ok::<(), anyhow::Error>(())
