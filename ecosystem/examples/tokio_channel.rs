@@ -1,19 +1,22 @@
 use anyhow::Result;
+use chrono::Utc;
 use std::{thread, time::Duration};
 use tokio::sync::mpsc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let (tx, rx) = tokio::sync::mpsc::channel(32);
-    worker(rx);
+    let handle = worker(rx);
 
     tokio::spawn(async move {
         loop {
-            tx.send("Future 1".to_string()).await?;
+            tx.send(Utc::now().to_rfc3339()).await?;
         }
         #[allow(unreachable_code)]
         Ok::<(), anyhow::Error>(())
     });
+
+    handle.join().unwrap();
 
     Ok(())
 }
