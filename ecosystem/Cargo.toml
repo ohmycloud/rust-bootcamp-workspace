@@ -36,3 +36,7 @@ tracing = "0.1.41"
 tracing-appender = "0.2.3"
 tracing-opentelemetry = "0.30.0"
 tracing-subscriber = "0.3.19"
+
+[dev-dependencies]
+console-subscriber = "0.4.1"
+tokio-console = "0.1.13"

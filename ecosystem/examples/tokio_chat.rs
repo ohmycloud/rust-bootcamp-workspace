@@ -14,6 +14,7 @@ const MAX_MESSAGE_LENGTH: usize = 128;
 pub async fn main() -> Result<()> {
     let layer = fmt::Layer::new().with_filter(LevelFilter::INFO);
     tracing_subscriber::registry().with(layer).init();
+    // console_subscriber::init();
 
     let addr = "0.0.0.0:8080";
     let listener = tokio::net::TcpListener::bind(addr).await?;

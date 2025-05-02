@@ -45,3 +45,13 @@
 ```bash
 docker run -d -p16686:16686 -p4317:4317 -e COLLECTOR_OTLP_ENABLED=true jaegertracing/all-in-one:latest
 ```
+
+# tokio-chat
+
+```bash
+cargo add console-subscriber --dev
+cargo install --locked tokio-console
+RUSTFLAGS="--cfg tokio_unstable" cargo run --example tokio_chat
+telnet 127.0.0.1 8080 # username1
+telnet 127.0.0.1 8080 # username2
+```
