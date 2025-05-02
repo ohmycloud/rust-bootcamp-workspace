@@ -22,6 +22,8 @@ async fn main() -> Result<()> {
             println!("Result: {}", ret);
         });
 
+        // there is no reactor running,
+        // must be called from the context of a Tokio 1.x runtime
         rt.block_on(tokio::time::sleep(Duration::from_millis(900)));
         rt.block_on(sleep(Duration::from_millis(900)));
     });
