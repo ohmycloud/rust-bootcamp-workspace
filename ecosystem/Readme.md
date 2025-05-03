@@ -37,6 +37,7 @@
 # 应用开发
 
 [tower](https://docs.rs/tower/latest/tower/index.html) 生态
+[tower-service](https://claude.ai/chat/0ffe8d8b-7ca2-42a8-a079-696e4b0afac5) Service trait 解释
 
 # 关系型数据库
 
