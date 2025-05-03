@@ -96,21 +96,31 @@ impl AppState {
 
     async fn shorten(&self, url: &str) -> Result<String, sqlx::Error> {
         let nano_id = nanoid::nanoid!(6);
-        sqlx::query("INSERT INTO urls (id, url) VALUES ($1, $2)")
-            .bind(&nano_id)
-            .bind(url)
-            .execute(&self.pool)
-            .await?;
+        let record: UrlRecord = sqlx::query_as(
+            "INSERT INTO urls (id, url) VALUES ($1, $2) ON CONFLICT DO UPDATE SET url=EXCLUDED.url RETURNING id",
+        )
+        .bind(&nano_id)
+        .bind(url)
+        .fetch_one(&self.pool)
+        .await?;
 
-        Ok(nano_id)
+        Ok(record.id)
     }
 
     async fn get_url(&self, id: &str) -> Result<String, sqlx::Error> {
-        let record: (String,) = sqlx::query_as("SELECT url FROM urls WHERE id = $1")
+        let record: UrlRecord = sqlx::query_as("SELECT url FROM urls WHERE id = $1")
             .bind(id)
             .fetch_one(&self.pool)
             .await?;
 
-        Ok(record.0)
+        Ok(record.url)
     }
+}
+
+#[derive(Debug, sqlx::FromRow)]
+struct UrlRecord {
+    #[sqlx(default)]
+    id: String,
+    #[sqlx(default)]
+    url: String,
 }

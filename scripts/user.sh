@@ -12,3 +12,6 @@ curl -X PATCH http://localhost:8080/update_user \
 curl -X POST http://localhost:9876/ \
 -H "Content-Type: application/json" \
 -d '{"url": "https://example.com"}'
+
+# get shortener
+curl -X GET http://localhost:9876/p1XcNH
