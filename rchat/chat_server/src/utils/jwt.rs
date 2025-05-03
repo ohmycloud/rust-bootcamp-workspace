@@ -6,7 +6,10 @@ const JWT_DURATION: u64 = 60 * 60 * 24 * 7;
 const JWT_ISSUER: &str = "rchat_server";
 const JWT_AUDIENCE: &str = "rchat_web";
 
+#[derive(Clone)]
 pub struct EncodingKey(Ed25519KeyPair);
+
+#[derive(Debug, Clone)]
 pub struct DecodingKey(Ed25519PublicKey);
 
 impl EncodingKey {
@@ -57,7 +60,7 @@ mod tests {
         let user = User::new(1, "ohmycloudy", "ohmycloudy@uk");
         let token = ek.sign(user.clone())?;
         let decoded_user: User = dk.verify(&token)?;
-        
+
         assert_eq!(user, decoded_user);
 
         Ok(())

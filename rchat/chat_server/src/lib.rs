@@ -5,6 +5,7 @@ mod handlers;
 mod models;
 mod utils;
 
+use std::fmt;
 use axum::routing::{get, patch, post};
 use axum::Router;
 pub use config::AppConfig;
@@ -13,6 +14,7 @@ use handlers::*;
 pub use models::User;
 use std::ops::Deref;
 use std::sync::Arc;
+use crate::utils::{DecodingKey, EncodingKey};
 
 #[derive(Debug, Clone)]
 pub(crate) struct AppState {
@@ -20,9 +22,19 @@ pub(crate) struct AppState {
 }
 
 #[allow(unused)]
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(crate) struct AppStateInner {
     pub(crate) config: AppConfig,
+    pub(crate) dk: DecodingKey,
+    pub(crate) ek: EncodingKey,
+}
+
+impl fmt::Debug for AppStateInner {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AppStateInner")
+            .field("config", &self.config)
+            .finish()
+    }
 }
 
 impl Deref for AppState {
@@ -35,8 +47,10 @@ impl Deref for AppState {
 
 impl AppState {
     pub fn new(config: AppConfig) -> Self {
+        let dk = DecodingKey::load(&config.auth.pk).expect("load pk failed");
+        let ek = EncodingKey::load(&config.auth.sk).expect("load sk failed");
         Self {
-            inner: Arc::new(AppStateInner { config }),
+            inner: Arc::new(AppStateInner { config, dk, ek }),
         }
     }
 }
