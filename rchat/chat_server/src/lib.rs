@@ -14,6 +14,8 @@ use handlers::*;
 pub use models::User;
 use std::ops::Deref;
 use std::sync::Arc;
+use anyhow::Context;
+use sqlx::PgPool;
 use crate::utils::{DecodingKey, EncodingKey};
 
 #[derive(Debug, Clone)]
@@ -27,6 +29,7 @@ pub(crate) struct AppStateInner {
     pub(crate) config: AppConfig,
     pub(crate) dk: DecodingKey,
     pub(crate) ek: EncodingKey,
+    pub(crate) pool: PgPool,
 }
 
 impl fmt::Debug for AppStateInner {
@@ -46,17 +49,19 @@ impl Deref for AppState {
 }
 
 impl AppState {
-    pub fn new(config: AppConfig) -> Self {
-        let dk = DecodingKey::load(&config.auth.pk).expect("load pk failed");
-        let ek = EncodingKey::load(&config.auth.sk).expect("load sk failed");
-        Self {
-            inner: Arc::new(AppStateInner { config, dk, ek }),
-        }
+    pub async fn try_new(config: AppConfig) -> Result<Self, AppError> {
+        let dk = DecodingKey::load(&config.auth.pk).context("load pk failed")?;
+        let ek = EncodingKey::load(&config.auth.sk).context("load sk failed")?;
+        let pool = PgPool::connect(&config.server.db_url).await.context("create pool failed")?;
+
+        Ok(Self {
+            inner: Arc::new(AppStateInner { config, dk, ek, pool }),
+        })
     }
 }
 
-pub fn get_router(config: AppConfig) -> Router {
-    let state = AppState::new(config);
+pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
+    let state = AppState::try_new(config).await?;
     let api = Router::new()
         .route("/signin", post(signin_handler))
         .route("/signup", post(signup_handler))
@@ -69,8 +74,10 @@ pub fn get_router(config: AppConfig) -> Router {
         )
         .route("/chat/:id/message", get(list_message_handler));
 
-    Router::new()
+    let app = Router::new()
         .route("/", get(index_handler))
         .nest("/api", api)
-        .with_state(state)
+        .with_state(state);
+
+    Ok(app)
 }
