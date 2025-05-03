@@ -3,3 +3,14 @@ GET http://localhost:8080/
 
 ### user handler
 GET http://localhost:8080/user
+
+### url shortener
+POST http://localhost:9876/
+Content-Type: application/json
+
+{
+    "url": "https://deepseek.com"
+}
+
+### get shortend url
+GET http://localhost:9876/p1XcNH
