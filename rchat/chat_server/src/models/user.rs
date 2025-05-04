@@ -26,6 +26,12 @@ pub struct CreateUser {
     pub password: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SigninUser {
+    pub email: String,
+    pub password: String,
+}
+
 fn hash_password(password: &str) -> Result<String, AppError> {
     let salt: SaltString = SaltString::generate(&mut OsRng);
 
@@ -79,20 +85,19 @@ impl User {
     }
 
     pub async fn verify(
-        email: &str,
-        password: &str,
+        signin_user: &SigninUser,
         pool: &PgPool,
     ) -> Result<Option<Self>, AppError> {
         let user: Option<User> =
             sqlx::query_as("SELECT id, fullname, created_at FROM users WHERE email = $1")
-                .bind(email)
+                .bind(&signin_user.email)
                 .fetch_optional(pool)
                 .await?;
 
         match user {
             Some(mut user) => {
                 let password_hash = mem::take(&mut user.password_hash);
-                let is_valid = verify_password(password, &password_hash.unwrap_or_default())?;
+                let is_valid = verify_password(&signin_user.password, &password_hash.unwrap_or_default())?;
                 if is_valid {
                     Ok(Some(user))
                 } else {
@@ -122,6 +127,16 @@ impl CreateUser {
     pub fn new(fullname: &str, email: &str, password: &str) -> Self {
         Self {
             fullname: fullname.to_string(),
+            email: email.to_string(),
+            password: password.to_string(),
+        }
+    }
+}
+
+#[cfg(test)]
+impl SigninUser {
+    pub fn new(email: &str, password: &str) -> Self {
+        Self  {
             email: email.to_string(),
             password: password.to_string(),
         }
@@ -168,6 +183,10 @@ mod tests {
         let user = user.unwrap();
         assert_eq!(user.fullname, created_user.fullname);
         assert_eq!(user.email, created_user.email);
+        
+        let signin_user = SigninUser::new(&email, &password);
+        let user = User::verify(&signin_user, &pool).await?;
+        assert!(user.is_some());
 
         Ok(())
     }
