@@ -4,6 +4,7 @@ use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use sqlx::PgPool;
 use std::mem;
+use crate::models::CreateUser;
 
 fn hash_password(password: &str) -> Result<String, AppError> {
     let salt: SaltString = SaltString::generate(&mut OsRng);
@@ -39,20 +40,18 @@ impl User {
     }
 
     pub async fn create(
-        email: &str,
-        fullname: &str,
-        password: &str,
+        user: &CreateUser,
         pool: &PgPool,
     ) -> Result<Self, AppError> {
-        let password_hash = hash_password(password)?;
+        let password_hash = hash_password(&user.password)?;
         let user = sqlx::query_as(
             r#"
         INSERT INTO users (email, fullname, password_hash)
         VALUES ($1, $2, $3)
         RETURNING id, fullname, email, created_at"#,
         )
-        .bind(email)
-        .bind(fullname)
+        .bind(&user.email)
+        .bind(&user.fullname)
         .bind(password_hash)
         .fetch_one(pool)
         .await?;
@@ -82,5 +81,61 @@ impl User {
             }
             None => Ok(None),
         }
+    }
+}
+
+#[cfg(test)]
+impl CreateUser {
+    pub fn new(fullname: &str, email: &str, password: &str) -> Self {
+        Self {
+            fullname: fullname.to_string(),
+            email: email.to_string(),
+            password: password.to_string(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+    use super::*;
+    use anyhow::Result;
+    use sqlx_db_tester::TestPg;
+
+    #[test]
+    fn hash_password_and_verify_should_work() -> Result<()> {
+        let password = "hunter42";
+        let password_hash = hash_password(password)?;
+        assert_eq!(password_hash.len(), 97);
+        assert!(verify_password(&password, &password_hash)?);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn create_and_verify_user_should_work() -> Result<()> {
+        let tdb = TestPg::new(
+            "postgres://user:password@localhost:5432/rchat".to_string(),
+            Path::new("../migrations"),
+        );
+        let pool = tdb.get_pool().await;
+        let email = "ohmycloudy@uk";
+        let name = "ohmycloudy";
+        let password = "hunter42";
+        let created_user = CreateUser::new(&name, &email, &password);
+        let user = User::create(&created_user, &pool).await?;
+
+        assert_eq!(user.email, created_user.email);
+        assert_eq!(user.fullname, created_user.fullname);
+        assert_eq!(user.email, created_user.email);
+        
+        // Find a user
+        let user = User::find_by_email(&created_user.email, &pool).await?;
+        assert!(user.is_some());
+        let user = user.unwrap();
+        assert_eq!(user.fullname, created_user.fullname);
+        assert_eq!(user.email, created_user.email);
+
+        Ok(())
     }
 }

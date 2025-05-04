@@ -1,3 +1,7 @@
+use axum::http::StatusCode;
+use axum::Json;
+use axum::response::{IntoResponse, Response};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -8,4 +12,28 @@ pub enum AppError {
     PasswordHashError(#[from] argon2::password_hash::Error),
     #[error("jwt error: {0}")]
     JwtError(#[from] jwt_simple::Error),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ErrorOutput {
+    pub error: String
+}
+
+impl ErrorOutput {
+    pub fn new(error: impl Into<String>) -> Self {
+        Self {
+            error: error.into()
+        }
+    }
+}
+
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        let status = match &self {
+            Self::SqlxError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::JwtError(_) => StatusCode::UNAUTHORIZED,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+        (status, Json(ErrorOutput::new(self.to_string()))).into_response()
+    }
 }

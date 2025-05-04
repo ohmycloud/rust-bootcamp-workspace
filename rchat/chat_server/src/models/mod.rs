@@ -15,6 +15,13 @@ pub struct User {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateUser {
+    pub fullname: String,
+    pub email: String,
+    pub password: String,
+}
+
 #[cfg(test)]
 impl User {
     pub fn new(id: i64, fullname: &str, email: &str) -> Self {
