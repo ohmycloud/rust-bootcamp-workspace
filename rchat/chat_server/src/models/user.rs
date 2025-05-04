@@ -163,7 +163,7 @@ mod tests {
     #[tokio::test]
     async fn create_and_verify_user_should_work() -> Result<()> {
         let tdb = TestPg::new(
-            "postgres://user:password@localhost:5432/rchat".to_string(),
+            "postgres://postgres:possword@localhost:5432/rchat".to_string(),
             Path::new("../migrations"),
         );
         let pool = tdb.get_pool().await;
