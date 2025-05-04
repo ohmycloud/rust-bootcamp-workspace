@@ -1,10 +1,30 @@
-use crate::{AppError, User};
+use crate::{AppError};
 use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use sqlx::PgPool;
 use std::mem;
-use crate::models::CreateUser;
+use jwt_simple::prelude::{Deserialize, Serialize};
+use chrono::{DateTime, Utc};
+use sqlx::FromRow;
+
+#[derive(Debug, Clone, FromRow, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct User {
+    pub id: i64,
+    pub fullname: String,
+    pub email: String,
+    #[sqlx(default)]
+    #[serde(skip)]
+    pub password_hash: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateUser {
+    pub fullname: String,
+    pub email: String,
+    pub password: String,
+}
 
 fn hash_password(password: &str) -> Result<String, AppError> {
     let salt: SaltString = SaltString::generate(&mut OsRng);
@@ -85,6 +105,19 @@ impl User {
 }
 
 #[cfg(test)]
+impl User {
+    pub fn new(id: i64, fullname: &str, email: &str) -> Self {
+        User {
+            id,
+            fullname: fullname.to_string(),
+            email: email.to_string(),
+            password_hash: None,
+            created_at: Utc::now(),
+        }
+    }
+}
+
+#[cfg(test)]
 impl CreateUser {
     pub fn new(fullname: &str, email: &str, password: &str) -> Self {
         Self {
@@ -128,7 +161,7 @@ mod tests {
         assert_eq!(user.email, created_user.email);
         assert_eq!(user.fullname, created_user.fullname);
         assert_eq!(user.email, created_user.email);
-        
+
         // Find a user
         let user = User::find_by_email(&created_user.email, &pool).await?;
         assert!(user.is_some());
