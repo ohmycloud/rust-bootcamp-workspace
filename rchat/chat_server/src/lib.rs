@@ -67,7 +67,9 @@ impl AppState {
         use sqlx_db_tester::TestPg;
         let dk = DecodingKey::load(&config.auth.pk).context("load pk failed")?;
         let ek = EncodingKey::load(&config.auth.sk).context("load sk failed")?;
-        let server_url = config.server.db_url.split('/').next().unwrap();
+        let pos = config.server.db_url.rfind('/').expect("invalid db_url");
+        let server_url = &config.server.db_url[..pos];
+
         let tdb = TestPg::new(server_url.to_string(), std::path::Path::new("../migrations"));
         let pool = tdb.get_pool().await;
 

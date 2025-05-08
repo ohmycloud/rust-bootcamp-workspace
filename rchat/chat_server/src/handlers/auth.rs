@@ -1,7 +1,8 @@
 use axum::extract::State;
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::Json;
 use axum::response::IntoResponse;
+use axum::routing::head;
 use serde::{Deserialize, Serialize};
 use crate::{AppError, AppState, User};
 use crate::models::{CreateUser, SigninUser};
@@ -18,6 +19,8 @@ pub(crate) async fn signup_handler(
 ) -> Result<impl IntoResponse, AppError> {
     let user = User::create(&user, &state.pool).await?;
     let token = state.ek.sign(user)?;
+    let mut header = HeaderMap::new();
+    header.insert("X-Token", HeaderValue::from_str(&token)?);
     let body = Json(AuthOutput { token });
 
     Ok((StatusCode::CREATED, body))
@@ -43,22 +46,22 @@ mod tests {
     use super::*;
     use http_body_util::BodyExt;
     use anyhow::Result;
-    use jwt_simple::reexports::serde_json;
     use crate::AppConfig;
 
     #[tokio::test]
     async fn signup_should_work() -> Result<()> {
         let config = AppConfig::load()?;
-        let (tdb, state) = AppState::new_for_test(config).await?;
+        let (_tdb, state) = AppState::new_for_test(config).await?;
         let created_user = CreateUser::new("ohmycoudy", "ohmycloudy@uk", "hunter42");
         let ret = signup_handler(State(state), Json(created_user))
             .await?
             .into_response();
 
         assert_eq!(ret.status(), StatusCode::CREATED);
-        let body = ret.into_body().collect().await?.to_bytes();
-        let ret: serde_json::Value = serde_json::from_slice(&body)?;
-        assert!(ret["token"].is_string());
+        let body = ret.into_body();
+        let bytes = body.collect().await?.to_bytes();
+        let token = String::from_utf8(bytes.to_vec())?;
+        assert_eq!(token, "");
 
         Ok(())
     }
