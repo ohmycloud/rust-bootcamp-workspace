@@ -60,6 +60,9 @@ mod tests {
         assert_eq!(ret.status(), StatusCode::CREATED);
         let body = ret.into_body();
         let bytes = body.collect().await?.to_bytes();
+        let ret: serde_json::Value = serde_json::from_slice(&bytes)?;
+        assert!(ret["token"].is_string());
+
         let token = String::from_utf8(bytes.to_vec())?;
         assert_eq!(token, "");
 
