@@ -12,7 +12,7 @@ pub struct AuthOutput {
 }
 
 #[axum::debug_handler]
-pub(crate) async fn signin_handler(
+pub(crate) async fn signup_handler(
     State(state): State<AppState>,
     Json(user): Json<CreateUser>
 ) -> Result<impl IntoResponse, AppError> {
@@ -23,7 +23,7 @@ pub(crate) async fn signin_handler(
     Ok((StatusCode::CREATED, body))
 }
 
-pub(crate) async fn signup_handler(
+pub(crate) async fn signin_handler(
     State(state): State<AppState>,
     Json(user): Json<SigninUser>
 ) -> Result<impl IntoResponse, AppError> {
@@ -41,11 +41,25 @@ pub(crate) async fn signup_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use http_body_util::BodyExt;
     use anyhow::Result;
-    
+    use jwt_simple::reexports::serde_json;
+    use crate::AppConfig;
+
     #[tokio::test]
     async fn signup_should_work() -> Result<()> {
-        
+        let config = AppConfig::load()?;
+        let (tdb, state) = AppState::new_for_test(config).await?;
+        let created_user = CreateUser::new("ohmycoudy", "ohmycloudy@uk", "hunter42");
+        let ret = signup_handler(State(state), Json(created_user))
+            .await?
+            .into_response();
+
+        assert_eq!(ret.status(), StatusCode::CREATED);
+        let body = ret.into_body().collect().await?.to_bytes();
+        let ret: serde_json::Value = serde_json::from_slice(&body)?;
+        assert!(ret["token"].is_string());
+
         Ok(())
     }
 }
