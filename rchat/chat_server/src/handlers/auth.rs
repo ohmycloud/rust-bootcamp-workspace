@@ -2,7 +2,6 @@ use axum::extract::State;
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::Json;
 use axum::response::IntoResponse;
-use axum::routing::head;
 use serde::{Deserialize, Serialize};
 use crate::{AppError, AppState, User};
 use crate::models::{CreateUser, SigninUser};
@@ -66,6 +65,23 @@ mod tests {
         let token = String::from_utf8(bytes.to_vec())?;
         assert_eq!(token, "");
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn signin_should_work() -> Result<()> {
+        let config = AppConfig::load()?;
+        let (_tdb, state) = AppState::new_for_test(config).await?;
+        let user = CreateUser::new("ohmycloudy", "ohmycloudy@uk", "hunter42");
+        User::create(&user, &state.pool).await?;
+
+        let input = SigninUser::new("ohmycloudy@uk", "hunter42");
+        let ret = signin_handler(State(state), Json(input)).await?.into_response();
+        assert_eq!(ret.status(), StatusCode::OK);
+        let body = ret.into_body();
+        let bytes = body.collect().await?.to_bytes();
+        let ret: AuthOutput = serde_json::from_slice(&bytes)?;
+        assert_eq!(ret.token, "");
         Ok(())
     }
 }
