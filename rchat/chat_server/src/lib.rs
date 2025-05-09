@@ -4,6 +4,7 @@ mod error;
 mod handlers;
 mod models;
 mod utils;
+mod middlewares;
 
 use std::fmt;
 use axum::routing::{get, patch, post};
@@ -11,6 +12,7 @@ use axum::Router;
 pub use config::AppConfig;
 pub use error::AppError;
 use handlers::*;
+pub use middlewares::*;
 pub use models::User;
 use std::ops::Deref;
 use std::sync::Arc;
