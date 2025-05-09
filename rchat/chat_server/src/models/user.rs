@@ -7,6 +7,7 @@ use std::mem;
 use jwt_simple::prelude::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use sqlx::FromRow;
+use tracing::instrument;
 
 #[derive(Debug, Clone, FromRow, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct User {
@@ -65,6 +66,10 @@ impl User {
         Ok(user)
     }
 
+    #[instrument(
+        name = "Creating a new user",
+        skip(user, pool),
+    )]
     pub async fn create(
         user: &CreateUser,
         pool: &PgPool,
@@ -72,15 +77,16 @@ impl User {
         let password_hash = hash_password(&user.password)?;
         let user = sqlx::query_as(
             r#"
-        INSERT INTO users (email, fullname, password_hash)
+        INSERT INTO users (fullname, email, password_hash)
         VALUES ($1, $2, $3)
-        RETURNING id, fullname, email, created_at"#,
+        RETURNING id, fullname, email, password_hash, created_at"#,
         )
-        .bind(&user.email)
         .bind(&user.fullname)
+        .bind(&user.email)
         .bind(password_hash)
         .fetch_one(pool)
         .await?;
+
         Ok(user)
     }
 
@@ -89,7 +95,7 @@ impl User {
         pool: &PgPool,
     ) -> Result<Option<Self>, AppError> {
         let user: Option<User> =
-            sqlx::query_as("SELECT id, fullname, created_at FROM users WHERE email = $1")
+            sqlx::query_as("SELECT id, fullname, email, password_hash, created_at FROM users WHERE email = $1")
                 .bind(&signin_user.email)
                 .fetch_optional(pool)
                 .await?;

@@ -44,25 +44,25 @@ pub(crate) async fn signin_handler(
 mod tests {
     use super::*;
     use http_body_util::BodyExt;
-    use anyhow::Result;
+    use anyhow::{Context, Result};
     use crate::AppConfig;
 
     #[tokio::test]
     async fn signup_should_work() -> Result<()> {
         let config = AppConfig::load()?;
         let (_tdb, state) = AppState::new_for_test(config).await?;
-        let created_user = CreateUser::new("ohmycoudy", "ohmycloudy@uk", "hunter42");
+        let created_user = CreateUser::new("raku", "raku@dev.org", "Hunter42");
+
         let ret = signup_handler(State(state), Json(created_user))
             .await?
             .into_response();
 
         assert_eq!(ret.status(), StatusCode::CREATED);
-        let body = ret.into_body();
-        let bytes = body.collect().await?.to_bytes();
-        let ret: serde_json::Value = serde_json::from_slice(&bytes)?;
-        assert!(ret["token"].is_string());
+        let body = ret.into_body().collect().await?.to_bytes();
+        let ret: AuthOutput = serde_json::from_slice(&body)?;
+        assert_ne!(ret.token, "");
 
-        let token = String::from_utf8(bytes.to_vec())?;
+        let token = String::from_utf8(body.to_vec())?;
         assert_eq!(token, "");
 
         Ok(())
@@ -72,16 +72,20 @@ mod tests {
     async fn signin_should_work() -> Result<()> {
         let config = AppConfig::load()?;
         let (_tdb, state) = AppState::new_for_test(config).await?;
-        let user = CreateUser::new("ohmycloudy", "ohmycloudy@uk", "hunter42");
-        User::create(&user, &state.pool).await?;
+        let name = "Alice";
+        let email = "alice@acme.org";
+        let password = "Hunter42";
 
-        let input = SigninUser::new("ohmycloudy@uk", "hunter42");
-        let ret = signin_handler(State(state), Json(input)).await?.into_response();
-        assert_eq!(ret.status(), StatusCode::OK);
-        let body = ret.into_body();
-        let bytes = body.collect().await?.to_bytes();
-        let ret: AuthOutput = serde_json::from_slice(&bytes)?;
-        assert_eq!(ret.token, "");
+        let user = CreateUser::new(name, email, password);
+        User::create(&user, &state.pool).await?;
+        let input = SigninUser::new(email, password);
+        let ret = signin_handler(State(state), Json(input))
+            .await?
+            .into_response();
+        assert_eq!(ret.status(), StatusCode::CREATED);
+        let body = ret.into_body().collect().await?.to_bytes();
+        let ret: AuthOutput = serde_json::from_slice(&body)?;
+        assert_ne!(ret.token, "");
         Ok(())
     }
 }
