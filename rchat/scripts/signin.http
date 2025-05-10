@@ -1,5 +1,7 @@
+@baseUrl = http://localhost:6688/api
+
 ### signup
-POST http://localhost:6688/api/signup
+POST {{baseUrl}}/signup
 Content-Type: application/json
 
 {
@@ -9,10 +11,17 @@ Content-Type: application/json
 }
 
 ### signin
-POST http://localhost:6688/api/signin
+# @name signin
+POST {{baseUrl}}/signin
 Content-Type: application/json
 
 {
   "email": "alice@acme.org",
   "password": "123456"
 }
+
+@auth_token = {{signin.response.body.token}}
+
+### get chat list
+GET {{baseUrl}}/chat
+Authorization: Bearer {{auth_token}}}

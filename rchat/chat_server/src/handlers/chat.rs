@@ -1,8 +1,12 @@
+use axum::Extension;
 use axum::response::IntoResponse;
+use crate::User;
 
 #[allow(unused)]
-pub(crate) async fn list_chat_handler() -> impl IntoResponse {
-    "chat"
+pub(crate) async fn list_chat_handler(
+    Extension(user): Extension<User>
+) -> impl IntoResponse {
+    user.fullname
 }
 
 pub(crate) async fn create_chat_handler() -> impl IntoResponse {
