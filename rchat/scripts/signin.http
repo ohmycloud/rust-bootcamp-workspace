@@ -1,4 +1,4 @@
-### GET request to example server
+### signup
 POST http://localhost:6688/api/signup
 Content-Type: application/json
 
@@ -8,4 +8,11 @@ Content-Type: application/json
   "password": "123456"
 }
 
-###
+### signin
+POST http://localhost:6688/api/signin
+Content-Type: application/json
+
+{
+  "email": "alice@acme.org",
+  "password": "123456"
+}

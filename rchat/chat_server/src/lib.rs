@@ -18,6 +18,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 use anyhow::Context;
 use axum::handler::Handler;
+use axum::middleware::from_fn_with_state;
 use sqlx::PgPool;
 use crate::utils::{DecodingKey, EncodingKey};
 
@@ -87,8 +88,6 @@ impl AppState {
 pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
     let state = AppState::try_new(config).await?;
     let api = Router::new()
-        .route("/signin", post(signin_handler))
-        .route("/signup", post(signup_handler))
         .route("/chat", get(signup_handler).post(create_chat_handler))
         .route(
             "/chat/{id}",
@@ -96,14 +95,17 @@ pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
                 .delete(delete_chat_handler)
                 .post(send_message_handler),
         )
-        .route("/chat/{id}/messages", get(list_message_handler));
+        .route("/chat/{id}/messages", get(list_message_handler))
+        .layer(from_fn_with_state(state.clone(), verify_token))
+        .route("/signin", post(signin_handler))
+        .route("/signup", post(signup_handler));
 
     let app = Router::new()
         .route("/", get(index_handler))
         .nest("/api", api)
-        .with_state(state.clone());
+        .with_state(state);
 
-    Ok(set_layer(app, state))
+    Ok(set_layer(app))
 }
 
 #[cfg(feature = "test-util")]
