@@ -1,4 +1,5 @@
 mod request_id;
+mod server_time;
 
 use axum::middleware::from_fn;
 use axum::Router;
@@ -8,6 +9,9 @@ use tower_http::LatencyUnit;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
 use tracing::Level;
 use crate::middlewares::request_id::set_request_id;
+use crate::middlewares::server_time::ServerTimeLayer;
+
+const REQUEST_ID_HEADER : &str = "x-request-id";
 
 pub fn set_layer(app: Router) -> Router {
     app.layer(
@@ -27,5 +31,6 @@ pub fn set_layer(app: Router) -> Router {
             )
             .layer(CompressionLayer::new().gzip(true).br(true).deflate(true))
             .layer(from_fn(set_request_id))
+            .layer(ServerTimeLayer)
     )
 }
