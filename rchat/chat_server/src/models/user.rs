@@ -33,6 +33,13 @@ pub struct SigninUser {
     pub password: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ChatUser {
+    pub id: i64,
+    pub fullname: String,
+    pub email: String,
+}
+
 fn hash_password(password: &str) -> Result<String, AppError> {
     let salt: SaltString = SaltString::generate(&mut OsRng);
 
@@ -136,6 +143,10 @@ impl SigninUser {
             password: password.to_string(),
         }
     }
+}
+
+impl ChatUser {
+    pub async fn fetch_all(user: &User, pool: &PgPool) {}
 }
 
 #[cfg(test)]
