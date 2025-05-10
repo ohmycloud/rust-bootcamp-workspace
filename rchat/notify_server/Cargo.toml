@@ -8,10 +8,6 @@ anyhow = { workspace = true }
 axum = { workspace = true }
 axum-extra = { workspace = true }
 futures = { workspace = true }
-serde = { workspace = true }
-serde_yaml = { workspace = true }
-sqlx = { workspace = true }
-thiserror = { workspace = true }
 tokio = { workspace = true }
 tokio-stream = { workspace = true }
 tracing = { workspace = true }
