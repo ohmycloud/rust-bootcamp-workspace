@@ -1,5 +1,5 @@
-use crate::vector::{dot_product, Vector};
-use anyhow::{anyhow, Result};
+use crate::vector::{Vector, dot_product};
+use anyhow::{Result, anyhow};
 use std::fmt::{Debug, Formatter};
 use std::ops::{Add, AddAssign, Mul};
 use std::sync::mpsc;

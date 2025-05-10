@@ -1,9 +1,9 @@
 use crate::cli::TextSignFormat;
 use crate::process::process_genpass;
 use crate::utils::input_reader;
+use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::prelude::BASE64_URL_SAFE_NO_PAD;
-use base64::Engine;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use rand::rngs::OsRng;
 use std::fs;

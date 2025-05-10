@@ -1,7 +1,7 @@
 use anyhow::Result;
-use log_parser::parser::pjson::{parse_value, JsonParser, JsonValue, Rule};
+use log_parser::parser::pjson::{JsonParser, JsonValue, Rule, parse_value};
 use pest::consumes_to;
-use pest::{parses_to, Parser};
+use pest::{Parser, parses_to};
 
 #[test]
 fn pest_parse_null_should_work() -> Result<()> {

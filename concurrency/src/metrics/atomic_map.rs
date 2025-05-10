@@ -2,8 +2,8 @@ use anyhow::anyhow;
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Formatter;
-use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicI64, Ordering};
 
 #[derive(Debug, Clone)]
 pub struct AtomicMetrics {

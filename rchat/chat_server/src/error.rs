@@ -1,5 +1,5 @@
-use axum::http::StatusCode;
 use axum::Json;
+use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -13,18 +13,18 @@ pub enum AppError {
     #[error("jwt error: {0}")]
     JwtError(#[from] jwt_simple::Error),
     #[error("http header parse error: {0}")]
-    HttpHeaderError(#[from] axum::http::header::InvalidHeaderValue)
+    HttpHeaderError(#[from] axum::http::header::InvalidHeaderValue),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ErrorOutput {
-    pub error: String
+    pub error: String,
 }
 
 impl ErrorOutput {
     pub fn new(error: impl Into<String>) -> Self {
         Self {
-            error: error.into()
+            error: error.into(),
         }
     }
 }

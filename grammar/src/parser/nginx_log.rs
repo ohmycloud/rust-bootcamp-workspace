@@ -1,7 +1,7 @@
 use std::net::IpAddr;
 
 use winnow::combinator::separated;
-use winnow::{ascii::digit1, PResult, Parser};
+use winnow::{PResult, Parser, ascii::digit1};
 
 #[derive(Debug)]
 pub struct NginxLog {

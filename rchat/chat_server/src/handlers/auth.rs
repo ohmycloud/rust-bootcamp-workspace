@@ -1,10 +1,10 @@
+use crate::models::{CreateUser, SigninUser};
+use crate::{AppError, AppState, User};
+use axum::Json;
 use axum::extract::State;
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
-use axum::Json;
 use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
-use crate::{AppError, AppState, User};
-use crate::models::{CreateUser, SigninUser};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AuthOutput {
@@ -14,7 +14,7 @@ pub struct AuthOutput {
 #[axum::debug_handler]
 pub(crate) async fn signup_handler(
     State(state): State<AppState>,
-    Json(user): Json<CreateUser>
+    Json(user): Json<CreateUser>,
 ) -> Result<impl IntoResponse, AppError> {
     let user = User::create(&user, &state.pool).await?;
     let token = state.ek.sign(user)?;
@@ -27,25 +27,28 @@ pub(crate) async fn signup_handler(
 
 pub(crate) async fn signin_handler(
     State(state): State<AppState>,
-    Json(user): Json<SigninUser>
+    Json(user): Json<SigninUser>,
 ) -> Result<impl IntoResponse, AppError> {
     let user = User::verify(&user, &state.pool).await?;
     match user {
         Some(user) => {
             let token = state.ek.sign(user)?;
             Ok((StatusCode::CREATED, token).into_response())
-        },
-        None => Ok((StatusCode::FORBIDDEN, "Invalid email or password".to_string()).into_response()),
+        }
+        None => Ok((
+            StatusCode::FORBIDDEN,
+            "Invalid email or password".to_string(),
+        )
+            .into_response()),
     }
 }
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use http_body_util::BodyExt;
-    use anyhow::{Context, Result};
     use crate::AppConfig;
+    use anyhow::{Context, Result};
+    use http_body_util::BodyExt;
 
     #[tokio::test]
     async fn signup_should_work() -> Result<()> {

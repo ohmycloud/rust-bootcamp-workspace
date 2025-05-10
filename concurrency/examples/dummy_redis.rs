@@ -1,14 +1,17 @@
-use std::net::SocketAddr;
 use anyhow::Result;
+use mpsc::Vector;
+use std::net::SocketAddr;
 use tokio::io;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tracing::{info, warn};
-use mpsc::Vector;
 
 const BUF_SIZE: usize = 4096;
 
-async fn process_redis_connection(mut stream: tokio::net::TcpStream, raddr: SocketAddr) -> Result<()> {
+async fn process_redis_connection(
+    mut stream: tokio::net::TcpStream,
+    raddr: SocketAddr,
+) -> Result<()> {
     loop {
         stream.readable().await?;
         let mut buf = Vec::with_capacity(BUF_SIZE);
@@ -22,7 +25,7 @@ async fn process_redis_connection(mut stream: tokio::net::TcpStream, raddr: Sock
                 let line = String::from_utf8_lossy(&buf);
                 info!("{:?}", line);
                 stream.write_all(b"+OKK\r\n");
-            },
+            }
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
                 continue;
             }

@@ -1,7 +1,7 @@
-use axum::response::sse::Event;
 use axum::response::Sse;
-use axum_extra::{headers, TypedHeader};
-use futures::{stream, Stream};
+use axum::response::sse::Event;
+use axum_extra::{TypedHeader, headers};
+use futures::{Stream, stream};
 use std::convert::Infallible;
 use std::time::Duration;
 use tokio_stream::StreamExt;

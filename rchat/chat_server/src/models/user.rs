@@ -1,12 +1,12 @@
-use crate::{AppError};
-use argon2::password_hash::rand_core::OsRng;
+use crate::AppError;
 use argon2::password_hash::SaltString;
+use argon2::password_hash::rand_core::OsRng;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use chrono::{DateTime, Utc};
+use jwt_simple::prelude::{Deserialize, Serialize};
+use sqlx::FromRow;
 use sqlx::PgPool;
 use std::mem;
-use jwt_simple::prelude::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
-use sqlx::FromRow;
 use tracing::instrument;
 
 #[derive(Debug, Clone, FromRow, serde::Serialize, serde::Deserialize, PartialEq)]
@@ -66,14 +66,8 @@ impl User {
         Ok(user)
     }
 
-    #[instrument(
-        name = "Creating a new user",
-        skip(user, pool),
-    )]
-    pub async fn create(
-        user: &CreateUser,
-        pool: &PgPool,
-    ) -> Result<Self, AppError> {
+    #[instrument(name = "Creating a new user", skip(user, pool))]
+    pub async fn create(user: &CreateUser, pool: &PgPool) -> Result<Self, AppError> {
         let password_hash = hash_password(&user.password)?;
         let user = sqlx::query_as(
             r#"
@@ -90,25 +84,20 @@ impl User {
         Ok(user)
     }
 
-    pub async fn verify(
-        signin_user: &SigninUser,
-        pool: &PgPool,
-    ) -> Result<Option<Self>, AppError> {
-        let user: Option<User> =
-            sqlx::query_as("SELECT id, fullname, email, password_hash, created_at FROM users WHERE email = $1")
-                .bind(&signin_user.email)
-                .fetch_optional(pool)
-                .await?;
+    pub async fn verify(signin_user: &SigninUser, pool: &PgPool) -> Result<Option<Self>, AppError> {
+        let user: Option<User> = sqlx::query_as(
+            "SELECT id, fullname, email, password_hash, created_at FROM users WHERE email = $1",
+        )
+        .bind(&signin_user.email)
+        .fetch_optional(pool)
+        .await?;
 
         match user {
             Some(mut user) => {
                 let password_hash = mem::take(&mut user.password_hash);
-                let is_valid = verify_password(&signin_user.password, &password_hash.unwrap_or_default())?;
-                if is_valid {
-                    Ok(Some(user))
-                } else {
-                    Ok(None)
-                }
+                let is_valid =
+                    verify_password(&signin_user.password, &password_hash.unwrap_or_default())?;
+                if is_valid { Ok(Some(user)) } else { Ok(None) }
             }
             None => Ok(None),
         }
@@ -142,7 +131,7 @@ impl CreateUser {
 #[cfg(test)]
 impl SigninUser {
     pub fn new(email: &str, password: &str) -> Self {
-        Self  {
+        Self {
             email: email.to_string(),
             password: password.to_string(),
         }
@@ -151,10 +140,10 @@ impl SigninUser {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
     use super::*;
     use anyhow::Result;
     use sqlx_db_tester::TestPg;
+    use std::path::Path;
 
     #[test]
     fn hash_password_and_verify_should_work() -> Result<()> {
@@ -189,7 +178,7 @@ mod tests {
         let user = user.unwrap();
         assert_eq!(user.fullname, created_user.fullname);
         assert_eq!(user.email, created_user.email);
-        
+
         let signin_user = SigninUser::new(&email, &password);
         let user = User::verify(&signin_user, &pool).await?;
         assert!(user.is_some());

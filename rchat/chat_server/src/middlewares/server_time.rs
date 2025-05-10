@@ -1,13 +1,10 @@
+use crate::middlewares::REQUEST_ID_HEADER;
+use axum::{extract::Request, response::Response};
 use std::pin::Pin;
-use axum::{
-    response::Response,
-    extract::Request,
-};
-use tower::{Service, Layer};
 use std::task::{Context, Poll};
 use tokio::time::Instant;
+use tower::{Layer, Service};
 use tracing::warn;
-use crate::middlewares::REQUEST_ID_HEADER;
 
 #[derive(Clone)]
 pub struct ServerTimeLayer;
@@ -33,7 +30,8 @@ where
     type Response = S::Response;
     type Error = S::Error;
 
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send + 'static>>;
+    type Future =
+        Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send + 'static>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)
@@ -49,8 +47,12 @@ where
                 Ok(hv) => {
                     response.headers_mut().insert("x-server-time", hv);
                 }
-                Err(e ) => {
-                    warn!("Parse elapsed time failed: {} for request {:?}", e, response.headers().get(REQUEST_ID_HEADER));
+                Err(e) => {
+                    warn!(
+                        "Parse elapsed time failed: {} for request {:?}",
+                        e,
+                        response.headers().get(REQUEST_ID_HEADER)
+                    );
                 }
             }
             Ok(response)

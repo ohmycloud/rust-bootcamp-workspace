@@ -1,9 +1,9 @@
 mod sse;
 
 use crate::sse::sse_handler;
+use axum::Router;
 use axum::response::{Html, IntoResponse};
 use axum::routing::get;
-use axum::Router;
 
 const INDEX_HTML: &str = include_str!("../index.html");
 

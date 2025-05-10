@@ -1,7 +1,7 @@
-use anyhow::{anyhow, Result};
-use log_parser::parser::pjson::{parse_value, JsonParser, Rule};
-use pest::iterators::Pair;
+use anyhow::{Result, anyhow};
+use log_parser::parser::pjson::{JsonParser, Rule, parse_value};
 use pest::Parser;
+use pest::iterators::Pair;
 
 fn main() -> Result<()> {
     let json_str = r#"{

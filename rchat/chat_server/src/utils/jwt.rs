@@ -64,6 +64,5 @@ mod tests {
         assert_eq!(user, decoded_user);
 
         Ok(())
-
     }
 }

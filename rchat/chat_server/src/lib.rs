@@ -2,25 +2,25 @@
 mod config;
 mod error;
 mod handlers;
+mod middlewares;
 mod models;
 mod utils;
-mod middlewares;
 
-use std::fmt;
-use axum::routing::{get, patch, post};
+use crate::utils::{DecodingKey, EncodingKey};
+use anyhow::Context;
 use axum::Router;
+use axum::handler::Handler;
+use axum::middleware::from_fn_with_state;
+use axum::routing::{get, patch, post};
 pub use config::AppConfig;
 pub use error::AppError;
 use handlers::*;
 pub use middlewares::*;
 pub use models::User;
+use sqlx::PgPool;
+use std::fmt;
 use std::ops::Deref;
 use std::sync::Arc;
-use anyhow::Context;
-use axum::handler::Handler;
-use axum::middleware::from_fn_with_state;
-use sqlx::PgPool;
-use crate::utils::{DecodingKey, EncodingKey};
 
 #[derive(Debug, Clone)]
 pub(crate) struct AppState {
@@ -52,35 +52,52 @@ impl Deref for AppState {
     }
 }
 
-
 impl AppState {
     pub async fn try_new(config: AppConfig) -> Result<Self, AppError> {
         let dk = DecodingKey::load(&config.auth.pk).context("load pk failed")?;
         let ek = EncodingKey::load(&config.auth.sk).context("load sk failed")?;
-        let pool = PgPool::connect(&config.server.db_url).await.context("create pool failed")?;
+        let pool = PgPool::connect(&config.server.db_url)
+            .await
+            .context("create pool failed")?;
 
         Ok(Self {
-            inner: Arc::new(AppStateInner { config, dk, ek, pool }),
+            inner: Arc::new(AppStateInner {
+                config,
+                dk,
+                ek,
+                pool,
+            }),
         })
     }
 }
 
 #[cfg(test)]
 impl AppState {
-    pub async fn new_for_test(config: AppConfig) -> Result<(sqlx_db_tester::TestPg, Self), AppError> {
+    pub async fn new_for_test(
+        config: AppConfig,
+    ) -> Result<(sqlx_db_tester::TestPg, Self), AppError> {
         use sqlx_db_tester::TestPg;
         let dk = DecodingKey::load(&config.auth.pk).context("load pk failed")?;
         let ek = EncodingKey::load(&config.auth.sk).context("load sk failed")?;
         let pos = config.server.db_url.rfind('/').expect("invalid db_url");
         let server_url = &config.server.db_url[..pos];
 
-        let tdb = TestPg::new(server_url.to_string(), std::path::Path::new("../migrations"));
+        let tdb = TestPg::new(
+            server_url.to_string(),
+            std::path::Path::new("../migrations"),
+        );
         let pool = tdb.get_pool().await;
 
         Ok((
-            tdb, Self {
-                inner: Arc::new(AppStateInner { config, dk, ek, pool }),
-            }
+            tdb,
+            Self {
+                inner: Arc::new(AppStateInner {
+                    config,
+                    dk,
+                    ek,
+                    pool,
+                }),
+            },
         ))
     }
 }
@@ -150,7 +167,7 @@ mod test_util {
                     ek,
                     dk,
                     pool,
-                })
+                }),
             };
             Ok((tdb, state))
         }

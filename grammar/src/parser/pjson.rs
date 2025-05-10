@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use pest::iterators::Pair;
 use pest_derive::Parser;
 use std::collections::HashMap;

@@ -3,4 +3,4 @@ pub mod metrics;
 mod vector;
 
 pub use metrics::AtomicMetrics;
-pub use vector::{dot_product, Vector};
+pub use vector::{Vector, dot_product};

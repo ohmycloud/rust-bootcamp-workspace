@@ -1,9 +1,9 @@
+use crate::middlewares::REQUEST_ID_HEADER;
 use axum::extract::Request;
 use axum::http::HeaderValue;
 use axum::middleware::Next;
 use axum::response::Response;
 use tracing::warn;
-use crate::middlewares::REQUEST_ID_HEADER;
 
 pub async fn set_request_id(mut req: Request, next: Next) -> Response {
     let request_id = match req.headers().get(REQUEST_ID_HEADER) {
