@@ -1,7 +1,7 @@
 use std::net::IpAddr;
 
 use winnow::combinator::separated;
-use winnow::{PResult, Parser, ascii::digit1};
+use winnow::{ModalResult, Parser, ascii::digit1};
 
 #[derive(Debug)]
 pub struct NginxLog {
@@ -16,10 +16,10 @@ pub struct NginxLog {
     pub user_agent: String,
 }
 
-pub fn parse_ip(input: &mut &str) -> PResult<()> {
+pub fn parse_ip(input: &mut &str) -> ModalResult<()> {
     separated(4, digit1, ".").parse_next(input)
 }
 
-pub fn take_list<'s>(input: &mut &'s str) -> PResult<&'s str> {
+pub fn take_list<'s>(input: &mut &'s str) -> ModalResult<&'s str> {
     parse_ip.take().parse_next(input)
 }

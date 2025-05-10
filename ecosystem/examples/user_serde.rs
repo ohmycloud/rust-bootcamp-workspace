@@ -38,6 +38,7 @@ impl Sensitive {
     }
 }
 
+#[allow(dead_code)]
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -102,10 +103,11 @@ fn decrypt(encoded: &str) -> Result<Vec<u8>> {
     let cipher = ChaCha20Poly1305::new(KEY.into());
     let nonce_bytes = &decoded[..12];
     let nonce = Nonce::from_slice(nonce_bytes);
-    let decrypted = cipher.decrypt(&nonce, &decoded[12..]).unwrap();
+    let decrypted = cipher.decrypt(nonce, &decoded[12..]).unwrap();
     Ok(decrypted)
 }
 
+#[allow(dead_code)]
 fn serde_encrypt<S>(data: &str, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
@@ -114,6 +116,7 @@ where
     serializer.serialize_str(&encrypted)
 }
 
+#[allow(dead_code)]
 fn serde_decrypt<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
     D: serde::Deserializer<'de>,

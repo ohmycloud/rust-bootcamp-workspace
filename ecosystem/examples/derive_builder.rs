@@ -2,6 +2,7 @@ use anyhow::Result;
 use chrono::{DateTime, Datelike, Utc};
 use derive_builder::Builder;
 
+#[allow(dead_code)]
 #[derive(Debug, Builder)]
 #[builder(build_fn(name = "private_build", private))]
 struct User {

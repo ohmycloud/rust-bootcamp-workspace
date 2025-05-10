@@ -19,6 +19,7 @@ impl fmt::Display for ConcurrencyMetrics {
 }
 
 impl ConcurrencyMetrics {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         ConcurrencyMetrics {
             data: Arc::new(DashMap::new()),
@@ -35,5 +36,11 @@ impl ConcurrencyMetrics {
         let mut counter = self.data.entry(key.into()).or_insert(0);
         *counter -= 1;
         Ok(())
+    }
+}
+
+impl Default for ConcurrencyMetrics {
+    fn default() -> Self {
+        Self::new()
     }
 }

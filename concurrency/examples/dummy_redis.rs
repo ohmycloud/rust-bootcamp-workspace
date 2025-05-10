@@ -1,5 +1,4 @@
 use anyhow::Result;
-use mpsc::Vector;
 use std::net::SocketAddr;
 use tokio::io;
 use tokio::io::AsyncWriteExt;
@@ -24,7 +23,7 @@ async fn process_redis_connection(
                 info!("read {} bytes", n);
                 let line = String::from_utf8_lossy(&buf);
                 info!("{:?}", line);
-                stream.write_all(b"+OKK\r\n");
+                stream.write_all(b"+OKK\r\n").await.expect("write failed");
             }
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
                 continue;

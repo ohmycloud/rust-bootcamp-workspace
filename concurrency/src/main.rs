@@ -2,6 +2,7 @@ use anyhow::{Result, anyhow};
 use std::time::Duration;
 use std::{sync::mpsc, thread};
 
+#[allow(dead_code)]
 #[derive(Debug)]
 struct Msg {
     idx: usize,

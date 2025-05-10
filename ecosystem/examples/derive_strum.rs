@@ -7,6 +7,7 @@ use strum::{
 // You need to bring the ToString trait into scope to use it
 use std::string::ToString;
 
+#[allow(dead_code)]
 #[derive(
     Debug, EnumCount, EnumDiscriminants, EnumIs, EnumIter, EnumString, IntoStaticStr, VariantNames,
 )]
