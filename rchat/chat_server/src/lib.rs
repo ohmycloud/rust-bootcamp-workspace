@@ -91,19 +91,19 @@ pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
         .route("/signup", post(signup_handler))
         .route("/chat", get(signup_handler).post(create_chat_handler))
         .route(
-            "/chat/:id",
+            "/chat/{id}",
             patch(update_chat_handler)
                 .delete(delete_chat_handler)
                 .post(send_message_handler),
         )
-        .route("/chat/:id/messages", get(list_message_handler));
+        .route("/chat/{id}/messages", get(list_message_handler));
 
     let app = Router::new()
         .route("/", get(index_handler))
         .nest("/api", api)
-        .with_state(state);
+        .with_state(state.clone());
 
-    Ok(set_layer(app))
+    Ok(set_layer(app, state))
 }
 
 #[cfg(feature = "test-util")]

@@ -6,6 +6,7 @@ use std::convert::Infallible;
 use std::time::Duration;
 use tokio_stream::StreamExt;
 
+#[axum::debug_handler]
 pub(crate) async fn sse_handler(
     TypedHeader(user_agent): TypedHeader<headers::UserAgent>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
