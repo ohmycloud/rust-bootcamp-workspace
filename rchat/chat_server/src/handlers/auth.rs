@@ -1,3 +1,4 @@
+use crate::error::ErrorOutput;
 use crate::models::{CreateUser, SigninUser};
 use crate::{AppError, AppState, User};
 use axum::Json;
@@ -33,27 +34,25 @@ pub(crate) async fn signin_handler(
     match user {
         Some(user) => {
             let token = state.ek.sign(user)?;
-            Ok((StatusCode::CREATED, token).into_response())
+            Ok((StatusCode::CREATED, Json(AuthOutput { token })).into_response())
         }
-        None => Ok((
-            StatusCode::FORBIDDEN,
-            "Invalid email or password".to_string(),
-        )
-            .into_response()),
+        None => {
+            let body = Json(ErrorOutput::new("Invalid email or password"));
+            Ok((StatusCode::FORBIDDEN, body).into_response())
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::AppConfig;
+    use crate::error::ErrorOutput;
     use anyhow::Result;
     use http_body_util::BodyExt;
 
     #[tokio::test]
     async fn signup_should_work() -> Result<()> {
-        let config = AppConfig::load()?;
-        let (_tdb, state) = AppState::new_for_test(config).await?;
+        let (_tdb, state) = AppState::new_for_test().await?;
         let created_user = CreateUser::new("raku", "none", "raku@dev.org", "Hunter42");
 
         let ret = signup_handler(State(state), Json(created_user))
@@ -65,18 +64,14 @@ mod tests {
         let ret: AuthOutput = serde_json::from_slice(&body)?;
         assert_ne!(ret.token, "");
 
-        let token = String::from_utf8(body.to_vec())?;
-        assert_eq!(token, "");
-
         Ok(())
     }
 
     #[tokio::test]
-    async fn signin_should_work() -> Result<()> {
-        let config = AppConfig::load()?;
-        let (_tdb, state) = AppState::new_for_test(config).await?;
+    async fn signing_should_work() -> Result<()> {
+        let (_tdb, state) = AppState::new_for_test().await?;
         let name = "Alice";
-        let email = "alice@acme.org";
+        let email = "alice1@acme.org";
         let password = "Hunter42";
 
         let user = CreateUser::new(name, "none", email, password);
@@ -89,6 +84,24 @@ mod tests {
         let body = ret.into_body().collect().await?.to_bytes();
         let ret: AuthOutput = serde_json::from_slice(&body)?;
         assert_ne!(ret.token, "");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn signing_with_non_exist_user_should_403() -> Result<()> {
+        let (_tdb, state) = AppState::new_for_test().await?;
+        let email = "wangwei@tang.org";
+        let password = "123456";
+        let signing_user = SigninUser::new(email, password);
+        let ret = signin_handler(State(state), Json(signing_user))
+            .await
+            .into_response();
+        assert_eq!(ret.status(), StatusCode::FORBIDDEN);
+
+        let body = ret.into_body().collect().await?.to_bytes();
+        let ret: ErrorOutput = serde_json::from_slice(&body)?;
+        assert_eq!(ret.error, "Invalid email or password");
+
         Ok(())
     }
 }

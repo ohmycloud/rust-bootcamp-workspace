@@ -70,37 +70,6 @@ impl AppState {
     }
 }
 
-#[cfg(test)]
-impl AppState {
-    pub async fn new_for_test(
-        config: AppConfig,
-    ) -> Result<(sqlx_db_tester::TestPg, Self), AppError> {
-        use sqlx_db_tester::TestPg;
-        let dk = DecodingKey::load(&config.auth.pk).context("load pk failed")?;
-        let ek = EncodingKey::load(&config.auth.sk).context("load sk failed")?;
-        let pos = config.server.db_url.rfind('/').expect("invalid db_url");
-        let server_url = &config.server.db_url[..pos];
-
-        let tdb = TestPg::new(
-            server_url.to_string(),
-            std::path::Path::new("../migrations"),
-        );
-        let pool = tdb.get_pool().await;
-
-        Ok((
-            tdb,
-            Self {
-                inner: Arc::new(AppStateInner {
-                    config,
-                    dk,
-                    ek,
-                    pool,
-                }),
-            },
-        ))
-    }
-}
-
 pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
     let state = AppState::try_new(config).await?;
     let api = Router::new()
@@ -125,7 +94,7 @@ pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
     Ok(set_layer(app))
 }
 
-#[cfg(feature = "test-util")]
+#[cfg(test)]
 mod test_util {
     use super::*;
     use sqlx::{Executor, PgPool};
@@ -142,11 +111,11 @@ mod test_util {
         // run prepared sql to insert test data
         let sql = include_str!("../fixtures/test.sql").split(';');
         let mut ts = pool.begin().await.expect("begin transaction failed");
-        for s in sql {
-            if s.trim().is_empty() {
+        for sql_text in sql {
+            if sql_text.trim().is_empty() {
                 continue;
             }
-            ts.execute(s).await.expect("execute sql failed");
+            ts.execute(sql_text).await.expect("execute sql failed");
         }
         ts.commit().await.expect("commit transaction failed");
 
