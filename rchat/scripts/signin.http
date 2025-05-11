@@ -6,6 +6,7 @@ Content-Type: application/json
 
 {
   "fullname": "Alice Chen",
+  "workspace": "acme",
   "email": "alice@acme.org",
   "password": "123456"
 }
@@ -24,4 +25,8 @@ Content-Type: application/json
 
 ### get chat list
 GET {{baseUrl}}/chat
+Authorization: Bearer {{auth_token}}}
+
+### get user list
+GET {{baseUrl}}/users
 Authorization: Bearer {{auth_token}}}

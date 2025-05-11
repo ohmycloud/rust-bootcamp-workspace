@@ -1,4 +1,5 @@
 use crate::AppError;
+use crate::models::workspace::Workspace;
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
@@ -8,7 +9,6 @@ use sqlx::FromRow;
 use sqlx::PgPool;
 use std::mem;
 use tracing::instrument;
-use crate::models::workspace::Workspace;
 
 #[derive(Debug, Clone, FromRow, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct User {
@@ -69,10 +69,11 @@ fn verify_password(password: &str, password_hash: &str) -> Result<bool, AppError
 
 impl User {
     pub async fn find_by_email(email: &str, pool: &PgPool) -> Result<Option<Self>, AppError> {
-        let user = sqlx::query_as("SELECT id, ws_id, fullname, created_at FROM users WHERE email = $1")
-            .bind(email)
-            .fetch_optional(pool)
-            .await?;
+        let user =
+            sqlx::query_as("SELECT id, ws_id, fullname, created_at FROM users WHERE email = $1")
+                .bind(email)
+                .fetch_optional(pool)
+                .await?;
         Ok(user)
     }
 
@@ -101,7 +102,9 @@ impl User {
         .fetch_one(pool)
         .await?;
 
-        ws.update_owner(user.id, pool).await?;
+        if ws.owner_id == 0 {
+            ws.update_owner(user.id, pool).await?;
+        }
 
         Ok(user)
     }
@@ -139,27 +142,28 @@ impl User {
         }
     }
 
-    pub async fn add_to_workspace(&self, ws_id: i64,  pool: &PgPool) -> Result<User, AppError> {
+    pub async fn add_to_workspace(&self, ws_id: i64, pool: &PgPool) -> Result<User, AppError> {
         let user = sqlx::query_as(
             r#"
             UPDATE users
             SET ws_id = $1
             WHERE id = $2 and ws_id = 0
-            RETURNING id, ws_id, fullname, email, created_at"#
-        ).bind(ws_id)
-         .bind(self.id)
-         .fetch_one(pool)
-         .await?;
+            RETURNING id, ws_id, fullname, email, created_at"#,
+        )
+        .bind(ws_id)
+        .bind(self.id)
+        .fetch_one(pool)
+        .await?;
         Ok(user)
     }
 }
 
 #[cfg(test)]
 impl CreateUser {
-    pub fn new(fullname: &str, email: &str, password: &str) -> Self {
+    pub fn new(fullname: &str, ws: &str, email: &str, password: &str) -> Self {
         Self {
             fullname: fullname.to_string(),
-            workspace: "none".to_string(),
+            workspace: ws.to_string(),
             email: email.to_string(),
             password: password.to_string(),
         }
@@ -177,7 +181,8 @@ impl SigninUser {
 }
 
 impl ChatUser {
-    pub async fn fetch_all(user: &User, pool: &PgPool) {}
+    #[allow(dead_code)]
+    pub async fn fetch_all(_user: &User, _pool: &PgPool) {}
 }
 
 #[cfg(test)]
@@ -192,7 +197,7 @@ mod tests {
         let password = "hunter42";
         let password_hash = hash_password(password)?;
         assert_eq!(password_hash.len(), 97);
-        assert!(verify_password(&password, &password_hash)?);
+        assert!(verify_password(password, &password_hash)?);
 
         Ok(())
     }
@@ -200,14 +205,14 @@ mod tests {
     #[tokio::test]
     async fn create_and_verify_user_should_work() -> Result<()> {
         let tdb = TestPg::new(
-            "postgres://postgres:possword@localhost:5432/rchat".to_string(),
+            "postgres://postgres:possword@localhost:5432".to_string(),
             Path::new("../migrations"),
         );
         let pool = tdb.get_pool().await;
         let email = "ohmycloudy@uk";
         let name = "ohmycloudy";
         let password = "hunter42";
-        let created_user = CreateUser::new(&name, &email, &password);
+        let created_user = CreateUser::new(name, "none", email, password);
         let user = User::create(&created_user, &pool).await?;
 
         assert_eq!(user.email, created_user.email);
@@ -221,7 +226,7 @@ mod tests {
         assert_eq!(user.fullname, created_user.fullname);
         assert_eq!(user.email, created_user.email);
 
-        let signin_user = SigninUser::new(&email, &password);
+        let signin_user = SigninUser::new(email, password);
         let user = User::verify(&signin_user, &pool).await?;
         assert!(user.is_some());
 

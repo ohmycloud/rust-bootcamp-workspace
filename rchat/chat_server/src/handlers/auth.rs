@@ -47,14 +47,14 @@ pub(crate) async fn signin_handler(
 mod tests {
     use super::*;
     use crate::AppConfig;
-    use anyhow::{Context, Result};
+    use anyhow::Result;
     use http_body_util::BodyExt;
 
     #[tokio::test]
     async fn signup_should_work() -> Result<()> {
         let config = AppConfig::load()?;
         let (_tdb, state) = AppState::new_for_test(config).await?;
-        let created_user = CreateUser::new("raku", "raku@dev.org", "Hunter42");
+        let created_user = CreateUser::new("raku", "none", "raku@dev.org", "Hunter42");
 
         let ret = signup_handler(State(state), Json(created_user))
             .await?
@@ -79,7 +79,7 @@ mod tests {
         let email = "alice@acme.org";
         let password = "Hunter42";
 
-        let user = CreateUser::new(name, email, password);
+        let user = CreateUser::new(name, "none", email, password);
         User::create(&user, &state.pool).await?;
         let input = SigninUser::new(email, password);
         let ret = signin_handler(State(state), Json(input))

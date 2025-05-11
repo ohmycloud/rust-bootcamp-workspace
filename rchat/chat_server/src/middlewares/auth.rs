@@ -16,7 +16,7 @@ pub async fn verify_token(State(state): State<AppState>, req: Request, next: Nex
         match TypedHeader::<Authorization<Bearer>>::from_request_parts(&mut parts, &state).await {
             Ok(TypedHeader(Authorization(bearer))) => {
                 let token = bearer.token();
-                match state.dk.verify(&token) {
+                match state.dk.verify(token) {
                     Ok(user) => {
                         let mut req = Request::from_parts(parts, body);
                         req.extensions_mut().insert(user);
@@ -50,7 +50,7 @@ mod tests {
     use http::StatusCode;
     use tower::ServiceExt;
 
-    async fn handler(req: Request) -> impl IntoResponse {
+    async fn handler(_req: Request) -> impl IntoResponse {
         (StatusCode::OK, "ok")
     }
 

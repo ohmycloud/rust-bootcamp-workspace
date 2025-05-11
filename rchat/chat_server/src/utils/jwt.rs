@@ -1,6 +1,5 @@
 use crate::{AppError, User};
 use jwt_simple::prelude::*;
-use std::ops::Deref;
 
 const JWT_DURATION: u64 = 60 * 60 * 24 * 7;
 const JWT_ISSUER: &str = "rchat_server";
@@ -32,15 +31,18 @@ impl DecodingKey {
     }
 
     pub fn verify(&self, token: &str) -> Result<User, AppError> {
-        let mut opts = VerificationOptions::default();
-        opts.allowed_issuers = Some(HashSet::from_strings(&[JWT_ISSUER]));
-        opts.allowed_audiences = Some(HashSet::from_strings(&[JWT_AUDIENCE]));
+        let opts = VerificationOptions {
+            allowed_issuers: Some(HashSet::from_strings(&[JWT_ISSUER])),
+            allowed_audiences: Some(HashSet::from_strings(&[JWT_AUDIENCE])),
+            ..Default::default()
+        };
 
         let claims = self.0.verify_token::<User>(token, Some(opts))?;
         Ok(claims.custom)
     }
 }
 
+#[allow(dead_code)]
 pub fn generate_token(user: User, key: &EncodingKey) -> Result<String, AppError> {
     let claims = Claims::with_custom_claims(user, Duration::from_secs(JWT_DURATION));
     Ok(key.0.sign(claims)?)

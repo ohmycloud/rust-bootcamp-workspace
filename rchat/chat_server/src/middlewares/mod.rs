@@ -2,7 +2,6 @@ mod auth;
 mod request_id;
 mod server_time;
 
-use crate::AppState;
 use crate::middlewares::request_id::set_request_id;
 use crate::middlewares::server_time::ServerTimeLayer;
 use axum::Router;

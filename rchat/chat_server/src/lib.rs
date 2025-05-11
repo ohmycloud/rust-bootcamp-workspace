@@ -9,7 +9,6 @@ mod utils;
 use crate::utils::{DecodingKey, EncodingKey};
 use anyhow::Context;
 use axum::Router;
-use axum::handler::Handler;
 use axum::middleware::from_fn_with_state;
 use axum::routing::{get, patch, post};
 pub use config::AppConfig;
@@ -105,6 +104,7 @@ impl AppState {
 pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
     let state = AppState::try_new(config).await?;
     let api = Router::new()
+        .route("/users", get(list_chat_users_handler))
         .route("/chat", get(signup_handler).post(create_chat_handler))
         .route(
             "/chat/{id}",
