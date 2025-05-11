@@ -14,6 +14,8 @@ pub enum AppError {
     JwtError(#[from] jwt_simple::Error),
     #[error("http header parse error: {0}")]
     HttpHeaderError(#[from] axum::http::header::InvalidHeaderValue),
+    #[error("email already exists: {0}")]
+    EmailAlreadyExists(String),
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -8,10 +8,12 @@ use sqlx::FromRow;
 use sqlx::PgPool;
 use std::mem;
 use tracing::instrument;
+use crate::models::workspace::Workspace;
 
 #[derive(Debug, Clone, FromRow, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct User {
     pub id: i64,
+    pub ws_id: i64,
     pub fullname: String,
     pub email: String,
     #[sqlx(default)]
@@ -24,6 +26,7 @@ pub struct User {
 pub struct CreateUser {
     pub fullname: String,
     pub email: String,
+    pub workspace: String,
     pub password: String,
 }
 
@@ -33,7 +36,7 @@ pub struct SigninUser {
     pub password: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize, PartialEq)]
 pub struct ChatUser {
     pub id: i64,
     pub fullname: String,
@@ -66,7 +69,7 @@ fn verify_password(password: &str, password_hash: &str) -> Result<bool, AppError
 
 impl User {
     pub async fn find_by_email(email: &str, pool: &PgPool) -> Result<Option<Self>, AppError> {
-        let user = sqlx::query_as("SELECT id, fullname, created_at FROM users WHERE email = $1")
+        let user = sqlx::query_as("SELECT id, ws_id, fullname, created_at FROM users WHERE email = $1")
             .bind(email)
             .fetch_optional(pool)
             .await?;
@@ -75,25 +78,37 @@ impl User {
 
     #[instrument(name = "Creating a new user", skip(user, pool))]
     pub async fn create(user: &CreateUser, pool: &PgPool) -> Result<Self, AppError> {
+        // check if workspace exists, if not create one
+        let ws = match Workspace::find_by_name(&user.workspace, pool).await? {
+            Some(ws) => ws,
+            None => Workspace::create(&user.workspace, 0, pool).await?,
+        };
+        let find_user = Self::find_by_email(&user.email, pool).await?;
+        if find_user.is_some() {
+            return Err(AppError::EmailAlreadyExists(user.email.clone()));
+        }
         let password_hash = hash_password(&user.password)?;
-        let user = sqlx::query_as(
+        let user: User = sqlx::query_as(
             r#"
-        INSERT INTO users (fullname, email, password_hash)
-        VALUES ($1, $2, $3)
-        RETURNING id, fullname, email, password_hash, created_at"#,
+        INSERT INTO users (ws_id, fullname, email, password_hash)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id, ws_id, fullname, email, password_hash, created_at"#,
         )
+        .bind(ws.id)
         .bind(&user.fullname)
         .bind(&user.email)
         .bind(password_hash)
         .fetch_one(pool)
         .await?;
 
+        ws.update_owner(user.id, pool).await?;
+
         Ok(user)
     }
 
     pub async fn verify(signin_user: &SigninUser, pool: &PgPool) -> Result<Option<Self>, AppError> {
         let user: Option<User> = sqlx::query_as(
-            "SELECT id, fullname, email, password_hash, created_at FROM users WHERE email = $1",
+            "SELECT id, ws_id, fullname, email, password_hash, created_at FROM users WHERE email = $1",
         )
         .bind(&signin_user.email)
         .fetch_optional(pool)
@@ -116,11 +131,26 @@ impl User {
     pub fn new(id: i64, fullname: &str, email: &str) -> Self {
         User {
             id,
+            ws_id: 0,
             fullname: fullname.to_string(),
             email: email.to_string(),
             password_hash: None,
             created_at: Utc::now(),
         }
+    }
+
+    pub async fn add_to_workspace(&self, ws_id: i64,  pool: &PgPool) -> Result<User, AppError> {
+        let user = sqlx::query_as(
+            r#"
+            UPDATE users
+            SET ws_id = $1
+            WHERE id = $2 and ws_id = 0
+            RETURNING id, ws_id, fullname, email, created_at"#
+        ).bind(ws_id)
+         .bind(self.id)
+         .fetch_one(pool)
+         .await?;
+        Ok(user)
     }
 }
 
@@ -129,6 +159,7 @@ impl CreateUser {
     pub fn new(fullname: &str, email: &str, password: &str) -> Self {
         Self {
             fullname: fullname.to_string(),
+            workspace: "none".to_string(),
             email: email.to_string(),
             password: password.to_string(),
         }
