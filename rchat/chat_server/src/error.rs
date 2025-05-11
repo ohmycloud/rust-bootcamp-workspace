@@ -16,6 +16,10 @@ pub enum AppError {
     HttpHeaderError(#[from] axum::http::header::InvalidHeaderValue),
     #[error("email already exists: {0}")]
     EmailAlreadyExists(String),
+    #[error("create chat error: {0}")]
+    CreateChatError(String),
+    #[error("chat user not found: {0}")]
+    UserNotFound(String),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,7 +42,9 @@ impl IntoResponse for AppError {
             Self::PasswordHashError(_) => StatusCode::UNPROCESSABLE_ENTITY,
             Self::JwtError(_) => StatusCode::FORBIDDEN,
             Self::HttpHeaderError(_) => StatusCode::UNPROCESSABLE_ENTITY,
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::EmailAlreadyExists(_) => StatusCode::CONFLICT,
+            Self::CreateChatError(_) => StatusCode::BAD_REQUEST,
+            Self::UserNotFound(_) => StatusCode::NOT_FOUND,
         };
         (status, Json(ErrorOutput::new(self.to_string()))).into_response()
     }

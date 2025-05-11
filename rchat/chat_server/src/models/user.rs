@@ -185,9 +185,35 @@ impl SigninUser {
     }
 }
 
+#[allow(dead_code)]
 impl ChatUser {
-    #[allow(dead_code)]
-    pub async fn fetch_all(_user: &User, _pool: &PgPool) {}
+    pub async fn fetch_by_ids(ids: &[i64], pool: &PgPool) -> Result<Vec<Self>, AppError> {
+        let users = sqlx::query_as(
+            r#"
+        SELECT id, fullname, email
+        FROM users
+        WHERE id = ANY($1)
+        "#,
+        )
+        .bind(ids)
+        .fetch_all(pool)
+        .await?;
+
+        Ok(users)
+    }
+
+    pub async fn fetch_all(ws_id: i64, pool: &PgPool) -> Result<Vec<Self>, AppError> {
+        let users = sqlx::query_as(
+            r#"
+        SELECT id, fullname, email
+        FROM users
+        WHERE ws_id = $1"#,
+        )
+        .bind(ws_id)
+        .fetch_all(pool)
+        .await?;
+        Ok(users)
+    }
 }
 
 #[cfg(test)]

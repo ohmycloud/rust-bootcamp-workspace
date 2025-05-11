@@ -104,4 +104,20 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn signup_duplicate_user_should_409() -> Result<()> {
+        let (_tdb, state) = AppState::new_for_test().await?;
+        let input = CreateUser::new("Alice Chen", "dev", "alice@acme.org", "123456");
+
+        let ret = signup_handler(State(state), Json(input))
+            .await
+            .into_response();
+        assert_eq!(ret.status(), StatusCode::CONFLICT);
+        let body = ret.into_body().collect().await?.to_bytes();
+        let ret: ErrorOutput = serde_json::from_slice(&body)?;
+
+        assert_eq!(ret.error, "email already exists: alice@acme.org");
+        Ok(())
+    }
 }

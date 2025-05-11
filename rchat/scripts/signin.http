@@ -23,6 +23,17 @@ Content-Type: application/json
 
 @auth_token = {{signin.response.body.token}}
 
+### create chat
+POST {{baseUrl}}/chat
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "name": "acme",
+  "members": [1, 2],
+  "public": false
+}
+
 ### get chat list
 GET {{baseUrl}}/chat
 Authorization: Bearer {{auth_token}}}
