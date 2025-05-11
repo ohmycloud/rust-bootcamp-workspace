@@ -20,6 +20,8 @@ pub enum AppError {
     CreateChatError(String),
     #[error("chat user not found: {0}")]
     UserNotFound(String),
+    #[error("io error: {0}")]
+    IoError(#[from] std::io::Error),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -45,6 +47,7 @@ impl IntoResponse for AppError {
             Self::EmailAlreadyExists(_) => StatusCode::CONFLICT,
             Self::CreateChatError(_) => StatusCode::BAD_REQUEST,
             Self::UserNotFound(_) => StatusCode::NOT_FOUND,
+            Self::IoError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (status, Json(ErrorOutput::new(self.to_string()))).into_response()
     }

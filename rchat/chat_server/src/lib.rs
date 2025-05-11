@@ -10,7 +10,7 @@ use crate::utils::{DecodingKey, EncodingKey};
 use anyhow::Context;
 use axum::Router;
 use axum::middleware::from_fn_with_state;
-use axum::routing::{get, patch, post};
+use axum::routing::{get, post};
 pub use config::AppConfig;
 pub use error::AppError;
 use handlers::*;
@@ -20,6 +20,7 @@ use sqlx::PgPool;
 use std::fmt;
 use std::ops::Deref;
 use std::sync::Arc;
+use tokio::fs;
 
 #[derive(Debug, Clone)]
 pub(crate) struct AppState {
@@ -53,6 +54,10 @@ impl Deref for AppState {
 
 impl AppState {
     pub async fn try_new(config: AppConfig) -> Result<Self, AppError> {
+        fs::create_dir_all(&config.server.base_dir)
+            .await
+            .context("Failed to create base directory")?;
+
         let dk = DecodingKey::load(&config.auth.pk).context("load pk failed")?;
         let ek = EncodingKey::load(&config.auth.sk).context("load sk failed")?;
         let pool = PgPool::connect(&config.server.db_url)
@@ -83,6 +88,8 @@ pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
                 .post(send_message_handler),
         )
         .route("/chat/{id}/messages", get(list_message_handler))
+        .route("/upload", post(upload_handler))
+        .route("/files/{ws_id}/{*path}", get(download_file_handler))
         .layer(from_fn_with_state(state.clone(), verify_token))
         .route("/signin", post(signin_handler))
         .route("/signup", post(signup_handler));

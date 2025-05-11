@@ -3,11 +3,13 @@ use anyhow::bail;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs::File;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerConfig {
     pub port: u16,
     pub db_url: String,
+    pub base_dir: PathBuf,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

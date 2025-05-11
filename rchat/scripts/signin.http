@@ -36,8 +36,28 @@ Authorization: Bearer {{auth_token}}
 
 ### get chat list
 GET {{baseUrl}}/chat
-Authorization: Bearer {{auth_token}}}
+Authorization: Bearer {{auth_token}}
 
 ### get user list
 GET {{baseUrl}}/users
-Authorization: Bearer {{auth_token}}}
+Authorization: Bearer {{auth_token}}
+
+### upload files
+POST {{baseUrl}}/upload
+Authorization: Bearer {{auth_token}}
+Content-Type: multipart/form-data; boundary=DummyBoundary
+
+--DummyBoundary
+Content-Disposition: form-data; filename="dummy.png"
+Content-Type: application/octet-stream
+
+< /Users/ohmycloud/dummy.png
+--DummyBoundary
+Content-Disposition: form-data; filename="hello.txt"
+
+Hello, Raku!
+--DummyBoundary--
+
+### download file handler
+GET {{baseUrl}}/files/1/8b7/230/ae7b0acf015add5234485a45efaf516413.png
+Authorization: Bearer {{auth_token}}
