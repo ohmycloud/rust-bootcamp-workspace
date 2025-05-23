@@ -18,6 +18,10 @@ pub enum AppError {
     EmailAlreadyExists(String),
     #[error("create chat error: {0}")]
     CreateChatError(String),
+    #[error("create message error: {0}")]
+    CreateMessageError(String),
+    #[error("{0}")]
+    ChatFileError(String),
     #[error("chat user not found: {0}")]
     UserNotFound(String),
     #[error("io error: {0}")]
@@ -46,6 +50,8 @@ impl IntoResponse for AppError {
             Self::HttpHeaderError(_) => StatusCode::UNPROCESSABLE_ENTITY,
             Self::EmailAlreadyExists(_) => StatusCode::CONFLICT,
             Self::CreateChatError(_) => StatusCode::BAD_REQUEST,
+            Self::CreateMessageError(_) => StatusCode::BAD_REQUEST,
+            Self::ChatFileError(_) => StatusCode::BAD_REQUEST,
             Self::UserNotFound(_) => StatusCode::NOT_FOUND,
             Self::IoError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };

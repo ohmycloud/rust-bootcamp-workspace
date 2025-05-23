@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS messages(
     chat_id bigint NOT NULL REFERENCES chats(id),
     sender_id bigint NOT NULL REFERENCES users(id),
     content text NOT NULL,
-    images text[],
+    files text[] NOT NULL DEFAULT '{}',
     created_at timestamptz DEFAULT CURRENT_TIMESTAMP
 );
 
