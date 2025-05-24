@@ -8,6 +8,9 @@ VALUES (0, 'superuser', 'super@none.org', '');
 INSERT INTO workspaces(id, name, owner_id)
 VALUES (0, 'none', 0);
 
+INSERT INTO chats(ws_id, name, type, members)
+VALUES (0, 'general', 'public_channel', '{0}');
+
 UPDATE users SET ws_id = 0 where id = 0;
 COMMIT;
 
