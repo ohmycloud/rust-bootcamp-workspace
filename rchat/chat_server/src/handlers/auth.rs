@@ -1,6 +1,6 @@
 use crate::error::ErrorOutput;
 use crate::models::{CreateUser, SigninUser};
-use crate::{AppError, AppState, User};
+use crate::{AppError, AppState};
 use axum::Json;
 use axum::extract::State;
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
@@ -17,7 +17,7 @@ pub(crate) async fn signup_handler(
     State(state): State<AppState>,
     Json(user): Json<CreateUser>,
 ) -> Result<impl IntoResponse, AppError> {
-    let user = User::create(&user, &state.pool).await?;
+    let user = state.create_user(&user).await?;
     let token = state.ek.sign(user)?;
     let mut header = HeaderMap::new();
     header.insert("X-Token", HeaderValue::from_str(&token)?);
@@ -30,7 +30,7 @@ pub(crate) async fn signin_handler(
     State(state): State<AppState>,
     Json(user): Json<SigninUser>,
 ) -> Result<impl IntoResponse, AppError> {
-    let user = User::verify(&user, &state.pool).await?;
+    let user = state.verify(&user).await?;
     match user {
         Some(user) => {
             let token = state.ek.sign(user)?;
@@ -75,7 +75,7 @@ mod tests {
         let password = "Hunter42";
 
         let user = CreateUser::new(name, "none", email, password);
-        User::create(&user, &state.pool).await?;
+        state.create_user(&user).await?;
         let input = SigninUser::new(email, password);
         let ret = signin_handler(State(state), Json(input))
             .await?

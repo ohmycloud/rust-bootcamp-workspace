@@ -1,8 +1,7 @@
-use crate::AppError;
+use crate::{AppError, AppState};
 use crate::models::ChatUser;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CreateChat {
@@ -31,8 +30,8 @@ pub struct Chat {
 }
 
 #[allow(dead_code)]
-impl Chat {
-    pub async fn create(input: CreateChat, ws_id: i64, pool: &PgPool) -> Result<Self, AppError> {
+impl AppState {
+    pub async fn create_chat(&self, input: CreateChat, ws_id: i64) -> Result<Chat, AppError> {
         let len = input.members.len();
         if len < 2 {
             return Err(AppError::CreateChatError(
@@ -45,7 +44,7 @@ impl Chat {
             ));
         }
         // verify if all member exist
-        let users = ChatUser::fetch_by_ids(&input.members, pool).await?;
+        let users = ChatUser::fetch_by_ids(&input.members, &self.pool).await?;
         if users.len() != len {
             return Err(AppError::CreateChatError(
                 "Some members do not exists".to_string(),
@@ -74,13 +73,13 @@ impl Chat {
         .bind(input.name)
         .bind(chat_type)
         .bind(input.members)
-        .fetch_one(pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(chat)
     }
 
-    pub async fn fetch_all(ws_id: i64, pool: &PgPool) -> Result<Vec<Self>, AppError> {
+    pub async fn fetch_all(&self, ws_id: i64) -> Result<Vec<Chat>, AppError> {
         let chats = sqlx::query_as(
             r#"
         SELECT id, ws_id, name, type, members, created_at
@@ -88,13 +87,13 @@ impl Chat {
         WHERE ws_id = $1"#,
         )
         .bind(ws_id)
-        .fetch_all(pool)
+        .fetch_all(&self.pool)
         .await?;
 
         Ok(chats)
     }
 
-    pub async fn fetch_by_id(id: i64, pool: &PgPool) -> Result<Option<Self>, AppError> {
+    pub async fn fetch_by_id(&self, id: i64) -> Result<Option<Chat>, AppError> {
         let chat = sqlx::query_as(
             r#"
         SELECT id, ws_id, name, type, members, created_at
@@ -102,7 +101,7 @@ impl Chat {
         WHERE id = $1"#,
         )
         .bind(id)
-        .fetch_optional(pool)
+        .fetch_optional(&self.pool)
         .await?;
 
         Ok(chat)
@@ -129,13 +128,12 @@ impl CreateChat {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::get_test_pool;
 
     #[tokio::test]
     async fn create_single_chat_should_work() -> Result<(), AppError> {
-        let (_tdb, pool) = get_test_pool(None).await;
+        let (_tdb, state) = AppState::new_for_test().await?;
         let input = CreateChat::new("", &[1, 2], false);
-        let chat = Chat::create(input, 1, &pool).await?;
+        let chat = state.create_chat(input, 1).await?;
 
         assert_eq!(chat.ws_id, 1);
         assert_eq!(chat.members.len(), 2);
@@ -146,9 +144,9 @@ mod tests {
 
     #[tokio::test]
     async fn create_public_named_chat_should_work() -> Result<(), AppError> {
-        let (_tdb, pool) = get_test_pool(None).await;
+        let (_tdb, state) = AppState::new_for_test().await?;
         let input = CreateChat::new("", &[1, 2, 3], false);
-        let chat = Chat::create(input, 1, &pool).await?;
+        let chat = state.create_chat(input, 1).await?;
 
         assert_eq!(chat.ws_id, 1);
         assert_eq!(chat.members.len(), 3);
@@ -159,8 +157,8 @@ mod tests {
 
     #[tokio::test]
     async fn fetch_chat_by_id_should_work() -> Result<(), AppError> {
-        let (_tdb, pool) = get_test_pool(None).await;
-        let chat = Chat::fetch_by_id(1, &pool).await?.unwrap();
+        let (_tdb, state) = AppState::new_for_test().await?;
+        let chat = state.fetch_by_id(1).await?.unwrap();
 
         assert_eq!(chat.id, 1);
         assert_eq!(chat.ws_id, 1);
@@ -173,8 +171,8 @@ mod tests {
 
     #[tokio::test]
     async fn fetch_all_chat_should_work() -> Result<(), AppError> {
-        let (_tdb, pool) = get_test_pool(None).await;
-        let chats = Chat::fetch_all(1, &pool).await?;
+        let (_tdb, state) = AppState::new_for_test().await?;
+        let chats = state.fetch_all(1).await?;
 
         assert_eq!(chats.len(), 4);
         Ok(())

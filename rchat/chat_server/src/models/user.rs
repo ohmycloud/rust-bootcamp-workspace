@@ -1,5 +1,4 @@
-use crate::AppError;
-use crate::models::workspace::Workspace;
+use crate::{AppError, AppState};
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
@@ -67,30 +66,30 @@ fn verify_password(password: &str, password_hash: &str) -> Result<bool, AppError
     Ok(is_valid)
 }
 
-impl User {
-    pub async fn find_by_email(email: &str, pool: &PgPool) -> Result<Option<Self>, AppError> {
+impl AppState {
+    pub async fn find_by_email(&self, email: &str) -> Result<Option<User>, AppError> {
         let user = sqlx::query_as(
             "SELECT id, ws_id, fullname, email, created_at FROM users WHERE email = $1",
         )
         .bind(email)
-        .fetch_optional(pool)
+        .fetch_optional(&self.pool)
         .await?;
 
         Ok(user)
     }
 
-    #[instrument(name = "Creating a new user", skip(user, pool))]
-    pub async fn create(user: &CreateUser, pool: &PgPool) -> Result<Self, AppError> {
+    #[instrument(name = "Creating a new user", skip(user))]
+    pub async fn create_user(&self, user: &CreateUser) -> Result<User, AppError> {
         // check if email exists
-        let find_user = Self::find_by_email(&user.email, pool).await?;
+        let find_user = self.find_by_email(&user.email).await?;
         if find_user.is_some() {
             return Err(AppError::EmailAlreadyExists(user.email.clone()));
         }
 
         // check if workspace exists, if not create one
-        let ws = match Workspace::find_by_name(&user.workspace, pool).await? {
+        let ws = match self.find_by_name(&user.workspace).await? {
             Some(ws) => ws,
-            None => Workspace::create(&user.workspace, 0, pool).await?,
+            None => self.create_workspace(&user.workspace, 0).await?,
         };
 
         let password_hash = hash_password(&user.password)?;
@@ -104,22 +103,22 @@ impl User {
         .bind(&user.fullname)
         .bind(&user.email)
         .bind(password_hash)
-        .fetch_one(pool)
+        .fetch_one(&self.pool)
         .await?;
 
         if ws.owner_id == 0 {
-            ws.update_owner(user.id, pool).await?;
+            ws.update_owner(user.id, &self.pool).await?;
         }
 
         Ok(user)
     }
 
-    pub async fn verify(signin_user: &SigninUser, pool: &PgPool) -> Result<Option<Self>, AppError> {
+    pub async fn verify(&self, signin_user: &SigninUser) -> Result<Option<User>, AppError> {
         let user: Option<User> = sqlx::query_as(
             "SELECT id, ws_id, fullname, email, password_hash, created_at FROM users WHERE email = $1",
         )
         .bind(&signin_user.email)
-        .fetch_optional(pool)
+        .fetch_optional(&self.pool)
         .await?;
 
         match user {
@@ -234,22 +233,22 @@ mod tests {
 
     #[tokio::test]
     async fn create_duplicate_user_should_fail() -> Result<()> {
-        let (_tdb, pool) = get_test_pool(None).await;
+        let (_tdb, state) = AppState::new_for_test().await?;
         let create_user = CreateUser::new("Alice Chen", "acme", "tchen@acme.org", "hunter42");
-        let user = User::create(&create_user, &pool).await?;
+        let user = state.create_user(&create_user).await?;
 
         assert_eq!(user.email, create_user.email);
         assert_eq!(user.fullname, create_user.fullname);
         assert!(user.id > 0);
 
-        let user = User::find_by_email(&create_user.email, &pool).await?;
+        let user = state.find_by_email(&create_user.email).await?;
         assert!(user.is_some());
         let user = user.unwrap();
         assert_eq!(user.email, create_user.email);
         assert_eq!(user.fullname, create_user.fullname);
 
         let sign_user = SigninUser::new(&create_user.email, &create_user.password);
-        let user = User::verify(&sign_user, &pool).await?;
+        let user = state.verify(&sign_user).await?;
         assert!(user.is_some());
 
         Ok(())
@@ -257,26 +256,26 @@ mod tests {
 
     #[tokio::test]
     async fn create_and_verify_user_should_work() -> Result<()> {
-        let (_tdb, pool) = get_test_pool(None).await;
+        let (_tdb, state) = AppState::new_for_test().await?;
         let email = "ohmycloudy@uk";
         let name = "ohmycloudy";
         let password = "hunter42";
         let created_user = CreateUser::new(name, "none", email, password);
-        let user = User::create(&created_user, &pool).await?;
+        let user = state.create_user(&created_user).await?;
 
         assert_eq!(user.email, created_user.email);
         assert_eq!(user.fullname, created_user.fullname);
         assert_eq!(user.email, created_user.email);
 
         // Find a user
-        let user = User::find_by_email(&created_user.email, &pool).await?;
+        let user = state.find_by_email(&created_user.email).await?;
         assert!(user.is_some());
         let user = user.unwrap();
         assert_eq!(user.fullname, created_user.fullname);
         assert_eq!(user.email, created_user.email);
 
         let signin_user = SigninUser::new(email, password);
-        let user = User::verify(&signin_user, &pool).await?;
+        let user = state.verify(&signin_user).await?;
         assert!(user.is_some());
 
         Ok(())

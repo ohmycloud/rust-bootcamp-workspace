@@ -1,4 +1,4 @@
-use crate::AppError;
+use crate::{AppError, AppState};
 use crate::models::ChatUser;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -12,8 +12,8 @@ pub struct Workspace {
     pub created_at: DateTime<Utc>,
 }
 
-impl Workspace {
-    pub async fn create(name: &str, owner_id: i64, pool: &PgPool) -> Result<Self, AppError> {
+impl AppState {
+    pub async fn create_workspace(&self, name: &str, owner_id: i64) -> Result<Workspace, AppError> {
         let ws = sqlx::query_as(
             r#"
           INSERT INTO workspaces (name, owner_id)
@@ -23,29 +23,13 @@ impl Workspace {
         )
         .bind(name)
         .bind(owner_id)
-        .fetch_one(pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(ws)
     }
 
-    pub async fn update_owner(&self, owner_id: i64, pool: &PgPool) -> Result<Self, AppError> {
-        let ws = sqlx::query_as(
-            r#"
-        UPDATE workspaces
-        SET owner_id = $1
-        WHERE id = $2 AND (SELECT ws_id FROM users WHERE id = $1) = $2
-        RETURNING id, name, owner_id, created_at"#,
-        )
-        .bind(owner_id)
-        .bind(self.id)
-        .fetch_one(pool)
-        .await?;
-
-        Ok(ws)
-    }
-
-    pub async fn fetch_all_chat_users(id: i64, pool: &PgPool) -> Result<Vec<ChatUser>, AppError> {
+    pub async fn fetch_all_chat_users(&self, id: i64) -> Result<Vec<ChatUser>, AppError> {
         let users = sqlx::query_as(
             r#"
         SELECT id, fullname, email
@@ -54,12 +38,12 @@ impl Workspace {
         "#,
         )
         .bind(id)
-        .fetch_all(pool)
+        .fetch_all(&self.pool)
         .await?;
         Ok(users)
     }
 
-    pub async fn find_by_name(name: &str, pool: &PgPool) -> Result<Option<Self>, AppError> {
+    pub async fn find_by_name(&self, name: &str) -> Result<Option<Workspace>, AppError> {
         let ws = sqlx::query_as(
             r#"
         SELECT id, name, owner_id, created_at
@@ -68,14 +52,14 @@ impl Workspace {
         "#,
         )
         .bind(name)
-        .fetch_optional(pool)
+        .fetch_optional(&self.pool)
         .await?;
 
         Ok(ws)
     }
 
     #[allow(dead_code)]
-    pub async fn find_by_id(id: i64, pool: &PgPool) -> Result<Option<Self>, AppError> {
+    pub async fn find_by_id(&self, id: i64) -> Result<Option<Workspace>, AppError> {
         let ws = sqlx::query_as(
             r#"
         SELECT id, name, owner_id, created_at
@@ -84,8 +68,26 @@ impl Workspace {
         "#,
         )
         .bind(id)
-        .fetch_optional(pool)
+        .fetch_optional(&self.pool)
         .await?;
+
+        Ok(ws)
+    }
+}
+
+impl Workspace {
+    pub async fn update_owner(&self, owner_id: i64, pool: &PgPool) -> Result<Self, AppError> {
+        let ws = sqlx::query_as(
+            r#"
+        UPDATE workspaces
+        SET owner_id = $1
+        WHERE id = $2 AND (SELECT ws_id FROM users WHERE id = $1) = $2
+        RETURNING id, name, owner_id, created_at"#,
+        )
+            .bind(owner_id)
+            .bind(self.id)
+            .fetch_one(pool)
+            .await?;
 
         Ok(ws)
     }
@@ -94,24 +96,22 @@ impl Workspace {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::User;
     use crate::models::CreateUser;
-    use crate::test_util::get_test_pool;
     use anyhow::Result;
 
     #[tokio::test]
     async fn workspace_create_should_works() -> Result<()> {
-        let (_tdb, pool) = get_test_pool(None).await;
-        let ws = Workspace::create("test", 0, &pool).await?;
+        let (_tdb, state) = AppState::new_for_test().await?;
+        let ws = state.create_workspace("test", 0).await?;
 
         let input = CreateUser::new("Tom Yang", &ws.name, "toma@acme.org", "Hunter42");
-        let user = User::create(&input, &pool).await?;
+        let user = state.create_user(&input).await?;
 
         assert_eq!(ws.name, "test");
         assert_eq!(user.ws_id, ws.id);
         assert_eq!(ws.owner_id, 0);
 
-        let ws = ws.update_owner(user.id, &pool).await?;
+        let ws = ws.update_owner(user.id, &state.pool).await?;
         assert_eq!(ws.owner_id, user.id);
 
         Ok(())
@@ -119,8 +119,8 @@ mod tests {
 
     #[tokio::test]
     async fn workspace_find_by_name_should_works() -> Result<()> {
-        let (_tdb, pool) = get_test_pool(None).await;
-        let ws = Workspace::find_by_name("acme", &pool).await?;
+        let (_tdb, state) = AppState::new_for_test().await?;
+        let ws = state.find_by_name("acme").await?;
         assert!(ws.is_some());
         assert_eq!(ws.unwrap().name, "acme");
 
@@ -129,9 +129,9 @@ mod tests {
 
     #[tokio::test]
     async fn workspace_fetch_all_chat_users_should_works() -> Result<()> {
-        let (_tdb, pool) = get_test_pool(None).await;
+        let (_tdb, state) = AppState::new_for_test().await?;
 
-        let users = Workspace::fetch_all_chat_users(1, &pool).await?;
+        let users = state.fetch_all_chat_users(1).await?;
         assert_eq!(users.len(), 5);
 
         Ok(())
