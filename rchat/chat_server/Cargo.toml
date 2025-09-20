@@ -27,6 +27,10 @@ sha1 = { workspace = true }
 hex = { workspace = true }
 mime_guess = "2.0.5"
 tokio-util = { version = "0.7.15", features = ["io"] }
+utoipa = { version = "5.4.0", features = ["axum_extras", "chrono"] }
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
+utoipa-redoc = { version = "6.0.0", features = ["axum"] }
+utoipa-rapidoc = { version = "6.0.0", features = ["axum"] }
 
 [dev-dependencies]
 http-body-util = "0.1.3"

@@ -1,10 +1,11 @@
-use crate::{AppError, AppState};
 use crate::models::ChatUser;
+use crate::{AppError, AppState};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct Workspace {
     pub id: i64,
     pub name: String,
@@ -84,10 +85,10 @@ impl Workspace {
         WHERE id = $2 AND (SELECT ws_id FROM users WHERE id = $1) = $2
         RETURNING id, name, owner_id, created_at"#,
         )
-            .bind(owner_id)
-            .bind(self.id)
-            .fetch_one(pool)
-            .await?;
+        .bind(owner_id)
+        .bind(self.id)
+        .fetch_one(pool)
+        .await?;
 
         Ok(ws)
     }

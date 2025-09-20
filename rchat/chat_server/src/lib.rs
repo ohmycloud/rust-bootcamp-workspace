@@ -4,8 +4,10 @@ mod error;
 mod handlers;
 mod middlewares;
 mod models;
+mod openai;
 mod utils;
 
+use crate::openai::OpenApiRouter;
 use crate::utils::{DecodingKey, EncodingKey};
 use anyhow::Context;
 use axum::Router;
@@ -95,6 +97,7 @@ pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
         .route("/signup", post(signup_handler));
 
     let app = Router::new()
+        .openapi()
         .route("/", get(index_handler))
         .nest("/api", api)
         .with_state(state);

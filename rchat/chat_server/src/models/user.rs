@@ -8,8 +8,9 @@ use sqlx::FromRow;
 use sqlx::PgPool;
 use std::mem;
 use tracing::instrument;
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, FromRow, serde::Serialize, serde::Deserialize, PartialEq)]
+#[derive(Debug, Clone, FromRow, serde::Serialize, serde::Deserialize, PartialEq, ToSchema)]
 pub struct User {
     pub id: i64,
     pub ws_id: i64,
@@ -21,7 +22,7 @@ pub struct User {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct CreateUser {
     pub fullname: String,
     pub email: String,
@@ -29,13 +30,13 @@ pub struct CreateUser {
     pub password: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct SigninUser {
     pub email: String,
     pub password: String,
 }
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct ChatUser {
     pub id: i64,
     pub fullname: String,

@@ -1,16 +1,17 @@
-use crate::{AppError, AppState};
 use crate::models::ChatUser;
+use crate::{AppError, AppState};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub struct CreateChat {
     pub name: Option<String>,
     pub members: Vec<i64>,
     pub public: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialOrd, PartialEq, sqlx::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialOrd, PartialEq, sqlx::Type, ToSchema)]
 #[sqlx(type_name = "chat_type", rename_all = "snake_case")]
 pub enum ChatType {
     Single,
@@ -19,7 +20,7 @@ pub enum ChatType {
     PublicChannel,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, sqlx::FromRow, ToSchema)]
 pub struct Chat {
     pub id: i64,
     pub ws_id: i64,
@@ -115,10 +116,10 @@ impl AppState {
             WHERE id = $1 AND $2 =ANY(members)
             "#,
         )
-            .bind(chat_id)
-            .bind(user_id)
-            .fetch_optional(&self.pool)
-            .await?;
+        .bind(chat_id)
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await?;
 
         Ok(is_member.is_some())
     }
