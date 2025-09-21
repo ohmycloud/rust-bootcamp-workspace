@@ -28,6 +28,8 @@ pub async fn verify_chat(State(state): State<AppState>, req: Request, next: Next
 
 #[cfg(test)]
 mod tests {
+    use crate::verify_token;
+
     use super::*;
     use anyhow::Result;
     use axum::Router;
@@ -48,8 +50,9 @@ mod tests {
         let token = state.ek.sign(user)?;
 
         let app = Router::new()
-            .route("/", get(handler))
+            .route("/chat/{id}/messages", get(handler))
             .layer(from_fn_with_state(state.clone(), verify_chat))
+            .layer(from_fn_with_state(state.clone(), verify_token))
             .with_state(state);
 
         let req = Request::builder()
