@@ -48,7 +48,7 @@ pub(crate) trait OpenApiRouter {
         CreateUser,
         CreateChat,
         CreateMessage,
-        ListMessages,
+        ListMessage,
         AuthOutput,
         ErrorOutput
     )),

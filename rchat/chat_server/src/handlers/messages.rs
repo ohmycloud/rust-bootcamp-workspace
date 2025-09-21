@@ -1,7 +1,7 @@
 use crate::error::ErrorOutput;
-use crate::models::{ChatFile, CreateMessage, ListMessages, Message};
+use crate::models::{ChatFile, CreateMessage, ListMessage, Message};
 use crate::{AppError, AppState, User};
-use axum::extract::{Multipart, Path, State};
+use axum::extract::{Multipart, Path, Query, State};
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use axum::{Extension, Json};
@@ -13,7 +13,7 @@ use tracing::{info, warn};
     post,
     path ="/api/chats/{id}",
     params(
-        ("id" = u64, Path, description = "Chat ID")
+        ("id" = i64, Path, description = "Chat ID")
     ),
     responses(
         (status = 200, description = "List of Messages", body = Message),
@@ -38,8 +38,8 @@ pub(crate) async fn send_message_handler(
     get,
     path ="/api/chats/{id}/messages",
     params(
-        ("id" = u64, Path, description = "Chat ID"),
-        ListMessages
+        ("id" = i64, Path, description = "Chat ID"),
+        ListMessage
     ),
     responses(
         (status = 200, description = "List of messages", body = Vec<Message>),
@@ -49,8 +49,13 @@ pub(crate) async fn send_message_handler(
         ("token" = [])
     )
 )]
-pub(crate) async fn list_message_handler() -> impl IntoResponse {
-    "list message"
+pub(crate) async fn list_message_handler(
+    State(state): State<AppState>,
+    Path(chat_id): Path<i64>,
+    Query(message): Query<ListMessage>,
+) -> Result<impl IntoResponse, AppError> {
+    let messages = state.list_messages(message, chat_id).await?;
+    Ok(Json(messages))
 }
 
 pub(crate) async fn upload_handler(

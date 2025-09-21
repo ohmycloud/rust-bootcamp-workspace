@@ -22,7 +22,7 @@ pub struct CreateMessage {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
-pub struct ListMessages {
+pub struct ListMessage {
     pub chat_id: i64,
     pub last_id: Option<i64>,
     pub limit: i64,
@@ -77,8 +77,18 @@ impl AppState {
         Ok(message)
     }
 
-    pub async fn list_messages(&self, input: ListMessages) -> Result<Vec<Message>, AppError> {
-        let last_id = input.last_id.unwrap_or(i64::MAX);
+    pub async fn list_messages(
+        &self,
+        message: ListMessage,
+        chat_id: i64,
+    ) -> Result<Vec<Message>, AppError> {
+        let last_id = message.last_id.unwrap_or(i64::MAX);
+        let limit = match message.limit {
+            0 => i64::MAX,
+            1..=100 => message.limit,
+            _ => 100,
+        };
+
         let messages: Vec<Message> = sqlx::query_as(
             r#"
                  SELECT id, chat_id, sender_id, content, created_at
@@ -88,9 +98,9 @@ impl AppState {
                  ORDER BY id DESC
                  LIMIT $3"#,
         )
-        .bind(input.chat_id)
+        .bind(message.chat_id)
         .bind(last_id)
-        .bind(input.limit)
+        .bind(limit)
         .fetch_all(&self.pool)
         .await?;
 
@@ -172,22 +182,22 @@ mod tests {
     #[tokio::test]
     async fn list_messages_should_work() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
-        let input = ListMessages {
+        let message = ListMessage {
             chat_id: 1,
             last_id: None,
             limit: 6,
         };
 
-        let messages: Vec<Message> = state.list_messages(input).await?;
+        let messages: Vec<Message> = state.list_messages(message, 1).await?;
         assert_eq!(messages.len(), 6);
 
         let last_id = messages.last().expect("last message should exists").id;
-        let input = ListMessages {
+        let message = ListMessage {
             chat_id: 1,
             last_id: Some(last_id),
             limit: 6,
         };
-        let messages: Vec<Message> = state.list_messages(input).await?;
+        let messages: Vec<Message> = state.list_messages(message, 1).await?;
         assert_eq!(messages.len(), 4);
 
         Ok(())
