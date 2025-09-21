@@ -80,7 +80,7 @@ impl AppState {
         Ok(chat)
     }
 
-    pub async fn fetch_all(&self, ws_id: i64) -> Result<Vec<Chat>, AppError> {
+    pub async fn fetch_all_chats(&self, ws_id: i64) -> Result<Vec<Chat>, AppError> {
         let chats = sqlx::query_as(
             r#"
         SELECT id, ws_id, name, type, members, created_at
@@ -94,7 +94,7 @@ impl AppState {
         Ok(chats)
     }
 
-    pub async fn fetch_by_id(&self, id: i64) -> Result<Option<Chat>, AppError> {
+    pub async fn fetch_chat_by_id(&self, id: i64) -> Result<Option<Chat>, AppError> {
         let chat = sqlx::query_as(
             r#"
         SELECT id, ws_id, name, type, members, created_at
@@ -175,7 +175,7 @@ mod tests {
     #[tokio::test]
     async fn fetch_chat_by_id_should_work() -> Result<(), AppError> {
         let (_tdb, state) = AppState::new_for_test().await?;
-        let chat = state.fetch_by_id(1).await?.unwrap();
+        let chat = state.fetch_chat_by_id(1).await?.unwrap();
 
         assert_eq!(chat.id, 1);
         assert_eq!(chat.ws_id, 1);
@@ -189,7 +189,7 @@ mod tests {
     #[tokio::test]
     async fn fetch_all_chat_should_work() -> Result<(), AppError> {
         let (_tdb, state) = AppState::new_for_test().await?;
-        let chats = state.fetch_all(1).await?;
+        let chats = state.fetch_all_chats(1).await?;
 
         assert_eq!(chats.len(), 4);
         Ok(())
@@ -199,6 +199,16 @@ mod tests {
     async fn chat_is_member_should_work() -> Result<(), AppError> {
         let (_, state) = AppState::new_for_test().await?;
         let is_member = state.is_chat_member(-1, 1).await?;
+        assert!(is_member);
+
+        // user 6 doesn't exist
+        let is_member = state.is_chat_member(1, 6).await?;
+        assert!(!is_member);
+
+        // chat 10 doesn't exist
+        let is_member = state.is_chat_member(10, 1).await?;
+        assert!(!is_member);
+
         Ok(())
     }
 }

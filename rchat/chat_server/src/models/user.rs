@@ -68,7 +68,7 @@ fn verify_password(password: &str, password_hash: &str) -> Result<bool, AppError
 }
 
 impl AppState {
-    pub async fn find_by_email(&self, email: &str) -> Result<Option<User>, AppError> {
+    pub async fn find_user_by_email(&self, email: &str) -> Result<Option<User>, AppError> {
         let user = sqlx::query_as(
             "SELECT id, ws_id, fullname, email, created_at FROM users WHERE email = $1",
         )
@@ -79,10 +79,21 @@ impl AppState {
         Ok(user)
     }
 
+    pub async fn find_user_by_id(&self, id: i32) -> Result<Option<User>, AppError> {
+        let user = sqlx::query_as(
+            "SELECT id, ws_id, fullname, email, created_at FROM users WHERE id = $1",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(user)
+    }
+
     #[instrument(name = "Creating a new user", skip(user))]
     pub async fn create_user(&self, user: &CreateUser) -> Result<User, AppError> {
         // check if email exists
-        let find_user = self.find_by_email(&user.email).await?;
+        let find_user = self.find_user_by_email(&user.email).await?;
         if find_user.is_some() {
             return Err(AppError::EmailAlreadyExists(user.email.clone()));
         }
@@ -219,7 +230,6 @@ impl ChatUser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::get_test_pool;
     use anyhow::Result;
 
     #[test]
@@ -242,7 +252,7 @@ mod tests {
         assert_eq!(user.fullname, create_user.fullname);
         assert!(user.id > 0);
 
-        let user = state.find_by_email(&create_user.email).await?;
+        let user = state.find_user_by_email(&create_user.email).await?;
         assert!(user.is_some());
         let user = user.unwrap();
         assert_eq!(user.email, create_user.email);
@@ -269,7 +279,7 @@ mod tests {
         assert_eq!(user.email, created_user.email);
 
         // Find a user
-        let user = state.find_by_email(&created_user.email).await?;
+        let user = state.find_user_by_email(&created_user.email).await?;
         assert!(user.is_some());
         let user = user.unwrap();
         assert_eq!(user.fullname, created_user.fullname);
@@ -278,6 +288,18 @@ mod tests {
         let signin_user = SigninUser::new(email, password);
         let user = state.verify(&signin_user).await?;
         assert!(user.is_some());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn find_user_by_id_should_work() -> Result<()> {
+        let (_tdb, state) = AppState::new_for_test().await?;
+        let user = state.find_user_by_id(1).await?;
+        assert!(user.is_some());
+
+        let user = user.unwrap();
+        assert_eq!(user.id, 1);
 
         Ok(())
     }

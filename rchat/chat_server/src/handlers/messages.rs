@@ -1,5 +1,5 @@
 use crate::error::ErrorOutput;
-use crate::models::{ChatFile, ListMessages, Message};
+use crate::models::{ChatFile, CreateMessage, ListMessages, Message};
 use crate::{AppError, AppState, User};
 use axum::extract::{Multipart, Path, State};
 use axum::http::HeaderMap;
@@ -23,8 +23,14 @@ use tracing::{info, warn};
         ("token" = [])
     )
 )]
-pub(crate) async fn send_message_handler() -> impl IntoResponse {
-    "send message"
+pub(crate) async fn send_message_handler(
+    Extension(user): Extension<User>,
+    State(state): State<AppState>,
+    Path(chat_id): Path<i64>,
+    Json(message): Json<CreateMessage>,
+) -> Result<impl IntoResponse, AppError> {
+    let msg = state.create_message(message, chat_id, user.id).await?;
+    Ok(Json(msg))
 }
 
 /// List all messages in the chat.
