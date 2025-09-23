@@ -24,7 +24,7 @@ RETURNS TRIGGER AS $$
 BEGIN
     RAISE NOTICE 'new message: %', NEW;
     IF TG_OP = 'INSERT' THEN
-        PERFORM pg_notify('new_message', row_to_json(NEW)::text);
+        PERFORM pg_notify('new_chat_message_created', row_to_json(NEW)::text);
     END IF;
     RETURN NEW;
 END;
