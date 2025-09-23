@@ -1,5 +1,6 @@
-use crate::{AppState, User, error::ErrorOutput, handlers::*, models::*};
+use crate::{AppState, handlers::*, models::*};
 use axum::Router;
+use chat_core::{Chat, ChatType, ChatUser, CreateChat, ErrorOutput, Message, User, Workspace};
 use utoipa::{
     Modify, OpenApi,
     openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},

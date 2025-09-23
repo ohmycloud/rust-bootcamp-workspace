@@ -1,10 +1,9 @@
-use crate::error::ErrorOutput;
-use crate::models::{Chat, CreateChat};
-use crate::{AppError, AppState, User};
+use crate::AppState;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Extension, Json};
+use chat_core::{AppError, Chat, CreateChat, ErrorOutput, User};
 
 /// List all chats in the workspace of the user.
 #[utoipa::path(

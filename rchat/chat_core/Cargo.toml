@@ -1,0 +1,17 @@
+[package]
+name = "chat_core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde = { workspace = true }
+sqlx = { workspace = true }
+utoipa = { version = "5.4.0", features = ["axum_extras", "chrono"] }
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
+utoipa-redoc = { version = "6.0.0", features = ["axum"] }
+utoipa-rapidoc = { version = "6.0.0", features = ["axum"] }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+axum = { workspace = true }
+argon2 = { workspace = true }
+jwt-simple = { workspace = true }

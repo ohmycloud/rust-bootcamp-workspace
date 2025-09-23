@@ -4,11 +4,19 @@ use crate::sse::sse_handler;
 use axum::Router;
 use axum::response::{Html, IntoResponse};
 use axum::routing::get;
+use chat_core::{Chat, Message};
 use futures::StreamExt;
 use sqlx::postgres::PgListener;
 use tracing::info;
 
 const INDEX_HTML: &str = include_str!("../index.html");
+
+pub enum Event {
+    NewChat(Chat),
+    AddToChat(Chat),
+    RemoveFromChat(Chat),
+    NewMessage(Message),
+}
 
 pub async fn get_router() -> Router {
     Router::new().route("/events", get(sse_handler))

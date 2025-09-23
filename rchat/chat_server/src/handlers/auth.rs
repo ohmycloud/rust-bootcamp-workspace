@@ -1,10 +1,11 @@
-use crate::error::ErrorOutput;
+use crate::AppState;
 use crate::models::{CreateUser, SigninUser};
-use crate::{AppError, AppState};
 use axum::Json;
 use axum::extract::State;
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
+use chat_core::AppError;
+use chat_core::ErrorOutput;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -62,8 +63,8 @@ pub(crate) async fn signin_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::ErrorOutput;
     use anyhow::Result;
+    use chat_core::ErrorOutput;
     use http_body_util::BodyExt;
 
     #[tokio::test]

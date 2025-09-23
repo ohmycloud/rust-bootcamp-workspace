@@ -1,34 +1,6 @@
-use crate::models::ChatUser;
-use crate::{AppError, AppState};
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use chat_core::{AppError, Chat, ChatType, ChatUser, CreateChat};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
-pub struct CreateChat {
-    pub name: Option<String>,
-    pub members: Vec<i64>,
-    pub public: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialOrd, PartialEq, sqlx::Type, ToSchema)]
-#[sqlx(type_name = "chat_type", rename_all = "snake_case")]
-pub enum ChatType {
-    Single,
-    Group,
-    PrivateChannel,
-    PublicChannel,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, sqlx::FromRow, ToSchema)]
-pub struct Chat {
-    pub id: i64,
-    pub ws_id: i64,
-    pub name: Option<String>,
-    pub r#type: ChatType,
-    pub members: Vec<i64>,
-    pub created_at: DateTime<Utc>,
-}
+use crate::AppState;
 
 #[allow(dead_code)]
 impl AppState {
@@ -122,23 +94,6 @@ impl AppState {
         .await?;
 
         Ok(is_member.is_some())
-    }
-}
-
-#[cfg(test)]
-impl CreateChat {
-    pub fn new(name: &str, members: &[i64], public: bool) -> Self {
-        let name = if name.is_empty() {
-            None
-        } else {
-            Some(name.to_string())
-        };
-
-        Self {
-            name,
-            members: members.to_vec(),
-            public,
-        }
     }
 }
 

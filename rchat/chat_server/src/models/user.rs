@@ -1,26 +1,12 @@
-use crate::{AppError, AppState};
+use crate::AppState;
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
-use chrono::{DateTime, Utc};
-use jwt_simple::prelude::{Deserialize, Serialize};
-use sqlx::FromRow;
-use sqlx::PgPool;
+use chat_core::{AppError, User};
+use serde::{Deserialize, Serialize};
 use std::mem;
 use tracing::instrument;
 use utoipa::ToSchema;
-
-#[derive(Debug, Clone, FromRow, serde::Serialize, serde::Deserialize, PartialEq, ToSchema)]
-pub struct User {
-    pub id: i64,
-    pub ws_id: i64,
-    pub fullname: String,
-    pub email: String,
-    #[sqlx(default)]
-    #[serde(skip)]
-    pub password_hash: Option<String>,
-    pub created_at: DateTime<Utc>,
-}
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct CreateUser {
@@ -34,13 +20,6 @@ pub struct CreateUser {
 pub struct SigninUser {
     pub email: String,
     pub password: String,
-}
-
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize, PartialEq, ToSchema)]
-pub struct ChatUser {
-    pub id: i64,
-    pub fullname: String,
-    pub email: String,
 }
 
 fn hash_password(password: &str) -> Result<String, AppError> {
@@ -146,35 +125,6 @@ impl AppState {
 }
 
 #[cfg(test)]
-impl User {
-    pub fn new(id: i64, fullname: &str, email: &str) -> Self {
-        User {
-            id,
-            ws_id: 0,
-            fullname: fullname.to_string(),
-            email: email.to_string(),
-            password_hash: None,
-            created_at: Utc::now(),
-        }
-    }
-
-    pub async fn add_to_workspace(&self, ws_id: i64, pool: &PgPool) -> Result<User, AppError> {
-        let user = sqlx::query_as(
-            r#"
-            UPDATE users
-            SET ws_id = $1
-            WHERE id = $2 and ws_id = 0
-            RETURNING id, ws_id, fullname, email, created_at"#,
-        )
-        .bind(ws_id)
-        .bind(self.id)
-        .fetch_one(pool)
-        .await?;
-        Ok(user)
-    }
-}
-
-#[cfg(test)]
 impl CreateUser {
     pub fn new(fullname: &str, ws: &str, email: &str, password: &str) -> Self {
         Self {
@@ -193,37 +143,6 @@ impl SigninUser {
             email: email.to_string(),
             password: password.to_string(),
         }
-    }
-}
-
-#[allow(dead_code)]
-impl ChatUser {
-    pub async fn fetch_by_ids(ids: &[i64], pool: &PgPool) -> Result<Vec<Self>, AppError> {
-        let users = sqlx::query_as(
-            r#"
-        SELECT id, fullname, email
-        FROM users
-        WHERE id = ANY($1)
-        "#,
-        )
-        .bind(ids)
-        .fetch_all(pool)
-        .await?;
-
-        Ok(users)
-    }
-
-    pub async fn fetch_all(ws_id: i64, pool: &PgPool) -> Result<Vec<Self>, AppError> {
-        let users = sqlx::query_as(
-            r#"
-        SELECT id, fullname, email
-        FROM users
-        WHERE ws_id = $1"#,
-        )
-        .bind(ws_id)
-        .fetch_all(pool)
-        .await?;
-        Ok(users)
     }
 }
 

@@ -1,6 +1,5 @@
 #[allow(dead_code)]
 mod config;
-mod error;
 mod handlers;
 mod middlewares;
 mod models;
@@ -13,11 +12,10 @@ use anyhow::Context;
 use axum::Router;
 use axum::middleware::from_fn_with_state;
 use axum::routing::{get, post};
+use chat_core::AppError;
 pub use config::AppConfig;
-pub use error::AppError;
 use handlers::*;
 pub use middlewares::*;
-pub use models::User;
 use sqlx::PgPool;
 use std::fmt;
 use std::ops::Deref;

@@ -1,19 +1,10 @@
-use crate::models::ChatFile;
-use crate::{AppError, AppState};
-use chrono::{DateTime, Utc};
+use chat_core::Message;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
-use std::str::FromStr;
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize, PartialEq, ToSchema)]
-pub struct Message {
-    pub id: i64,
-    pub chat_id: i64,
-    pub sender_id: i64,
-    pub content: String,
-    pub created_at: DateTime<Utc>,
-}
+use crate::models::ChatFile;
+use crate::{AppError, AppState};
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CreateMessage {

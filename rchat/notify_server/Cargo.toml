@@ -13,3 +13,4 @@ tokio-stream = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 sqlx = { workspace = true }
+chat_core = { version = "0.1.0", path = "../chat_core" }

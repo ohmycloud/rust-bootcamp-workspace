@@ -1,17 +1,6 @@
-use crate::models::ChatUser;
-use crate::{AppError, AppState};
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgPool};
-use utoipa::ToSchema;
+use crate::AppState;
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize, PartialEq, ToSchema)]
-pub struct Workspace {
-    pub id: i64,
-    pub name: String,
-    pub owner_id: i64,
-    pub created_at: DateTime<Utc>,
-}
+use chat_core::{AppError, ChatUser, Workspace};
 
 impl AppState {
     pub async fn create_workspace(&self, name: &str, owner_id: i64) -> Result<Workspace, AppError> {
@@ -70,24 +59,6 @@ impl AppState {
         )
         .bind(id)
         .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(ws)
-    }
-}
-
-impl Workspace {
-    pub async fn update_owner(&self, owner_id: i64, pool: &PgPool) -> Result<Self, AppError> {
-        let ws = sqlx::query_as(
-            r#"
-        UPDATE workspaces
-        SET owner_id = $1
-        WHERE id = $2 AND (SELECT ws_id FROM users WHERE id = $1) = $2
-        RETURNING id, name, owner_id, created_at"#,
-        )
-        .bind(owner_id)
-        .bind(self.id)
-        .fetch_one(pool)
         .await?;
 
         Ok(ws)
