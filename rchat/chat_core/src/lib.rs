@@ -81,24 +81,6 @@ impl User {
     }
 }
 
-impl Workspace {
-    pub async fn update_owner(&self, owner_id: i64, pool: &PgPool) -> Result<Self, AppError> {
-        let ws = sqlx::query_as(
-            r#"
-        UPDATE workspaces
-        SET owner_id = $1
-        WHERE id = $2 AND (SELECT ws_id FROM users WHERE id = $1) = $2
-        RETURNING id, name, owner_id, created_at"#,
-        )
-        .bind(owner_id)
-        .bind(self.id)
-        .fetch_one(pool)
-        .await?;
-
-        Ok(ws)
-    }
-}
-
 #[cfg(test)]
 impl User {
     pub async fn add_to_workspace(&self, ws_id: i64, pool: &PgPool) -> Result<User, AppError> {

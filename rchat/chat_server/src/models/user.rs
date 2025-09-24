@@ -98,7 +98,7 @@ impl AppState {
         .await?;
 
         if ws.owner_id == 0 {
-            ws.update_owner(user.id, &self.pool).await?;
+            self.update_workspace_owner(user.id, ws.id).await?;
         }
 
         Ok(user)

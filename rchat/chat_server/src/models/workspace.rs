@@ -19,6 +19,26 @@ impl AppState {
         Ok(ws)
     }
 
+    pub async fn update_workspace_owner(
+        &self,
+        user_id: i64,
+        owner_id: i64,
+    ) -> Result<Workspace, AppError> {
+        let ws = sqlx::query_as(
+            r#"
+        UPDATE workspaces
+        SET owner_id = $1
+        WHERE id = $2 AND (SELECT ws_id FROM users WHERE id = $1) = $2
+        RETURNING id, name, owner_id, created_at"#,
+        )
+        .bind(owner_id)
+        .bind(user_id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(ws)
+    }
+
     pub async fn fetch_all_chat_users(&self, id: i64) -> Result<Vec<ChatUser>, AppError> {
         let users = sqlx::query_as(
             r#"
@@ -83,7 +103,7 @@ mod tests {
         assert_eq!(user.ws_id, ws.id);
         assert_eq!(ws.owner_id, 0);
 
-        let ws = ws.update_owner(user.id, &state.pool).await?;
+        let ws = state.update_workspace_owner(user.id, ws.id).await?;
         assert_eq!(ws.owner_id, user.id);
 
         Ok(())
